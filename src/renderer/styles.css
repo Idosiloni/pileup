@@ -1,0 +1,200 @@
+/* Pileup prototype styles. Throwaway when porting to a real game engine.
+   Goal: readable, flat, just enough polish to feel like a real prototype. */
+
+* { box-sizing: border-box; }
+
+:root {
+  --bg: #f7f6f1;
+  --bg-card: #ffffff;
+  --bg-panel: #efeee8;
+  --text: #1a1a1a;
+  --text-muted: #6b6962;
+  --border: rgba(0, 0, 0, 0.12);
+  --accent: #534ab7;
+  --accent-bg: #eeedfe;
+  --win: #1d9e75;
+  --win-bg: #e1f5ee;
+  --lose: #a32d2d;
+  --lose-bg: #fcebeb;
+  --tie: #ba7517;
+  --tie-bg: #faeeda;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.app {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.tagline {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.btn-primary {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 20px;
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.btn-primary:hover { opacity: 0.85; }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.piles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.pile-panel {
+  background: var(--bg-panel);
+  border-radius: var(--radius-lg);
+  padding: 14px 14px 12px;
+}
+
+.pile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.pile-name { font-size: 13px; font-weight: 500; }
+.pile-score { font-size: 13px; color: var(--text-muted); }
+
+.pile-cards {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.card-mini {
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 4px;
+  text-align: center;
+  font-weight: 500;
+  font-size: 15px;
+  transition: opacity 0.3s, background 0.3s, border-color 0.3s, transform 0.3s;
+}
+.card-mini.flipped {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.card-mini.unflipped-reveal {
+  opacity: 0.45;
+}
+
+.arena {
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px 20px;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.arena-status {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  min-height: 20px;
+}
+
+.flip-display {
+  display: flex;
+  gap: 28px;
+  align-items: center;
+  min-height: 110px;
+}
+
+.card-big {
+  width: 80px;
+  height: 110px;
+  border-radius: var(--radius-lg);
+  border: 0.5px solid var(--border);
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 38px;
+  font-weight: 500;
+  transition: background 0.4s, border-color 0.4s, transform 0.3s, opacity 0.4s;
+}
+.card-big.win { background: var(--win-bg); color: var(--win); border-color: var(--win); }
+.card-big.lose { background: var(--lose-bg); color: var(--lose); border-color: var(--lose); opacity: 0.7; }
+.card-big.tie { background: var(--tie-bg); color: var(--tie); border-color: var(--tie); }
+
+.vs { font-size: 14px; color: var(--text-muted); font-weight: 500; }
+
+.arena-result {
+  margin-top: 14px;
+  font-size: 15px;
+  font-weight: 500;
+  min-height: 22px;
+}
+
+.log-panel {
+  background: var(--bg-panel);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.log-header {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.log {
+  max-height: 160px;
+  overflow-y: auto;
+  font-size: 12px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.log div::before { content: '> '; opacity: 0.5; }
