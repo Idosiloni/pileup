@@ -7,9 +7,11 @@
 
 if (typeof module !== 'undefined' && module.exports) {
   // Node / tests
-  const cards = require('./cards.js');
+  const cards     = require('./cards.js');
   const selection = require('./selection.js');
   const abilities = require('./abilities.js');
-  const battle = require('./battle.js');
-  module.exports = Object.assign({}, cards, selection, abilities, battle);
+  const battle    = require('./battle.js');
+  const run       = require('./run.js');
+  const shop      = require('./shop.js');
+  module.exports = Object.assign({}, cards, selection, abilities, battle, run, shop);
 }

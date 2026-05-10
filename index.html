@@ -3,73 +3,113 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pileup — battle simulator v0.3</title>
+  <title>Pileup — v0.4</title>
   <link rel="stylesheet" href="src/renderer/styles.css" />
 </head>
 <body>
   <main class="app">
+
     <header class="topbar">
       <div>
         <h1>Pileup</h1>
-        <p class="tagline">Battle simulator v0.3</p>
+        <p class="tagline">v0.4 — single-player run</p>
       </div>
-      <button id="newBattleBtn" class="btn-primary">New battle</button>
+      <button id="newRunBtn" class="btn-primary">New Run</button>
     </header>
 
-    <section class="battlefield">
-
-      <!-- Left pile -->
-      <div class="pile-panel" id="leftPilePanel">
-        <div class="pile-header">
-          <span class="pile-name">Player 1</span>
-          <span class="pile-score" id="leftScore">Score: 0</span>
-        </div>
-        <div class="pile-stack-wrap" id="leftStack"></div>
-        <div class="pile-cards" id="leftCards"></div>
+    <!-- Run status bar: HP, round, gold (hidden until run starts) -->
+    <div class="run-status" id="runStatus" hidden>
+      <div class="run-side">
+        <span class="run-name">You</span>
+        <div class="hp-track"><div class="hp-fill" id="playerHPFill"></div></div>
+        <span class="hp-num" id="playerHP">25</span>
       </div>
+      <div class="run-center">
+        <span class="run-round" id="roundLabel">Round 1</span>
+        <span class="run-gold" id="goldLabel">10g</span>
+      </div>
+      <div class="run-side run-side-right">
+        <span class="hp-num" id="aiHP">25</span>
+        <div class="hp-track"><div class="hp-fill hp-fill-enemy" id="aiHPFill"></div></div>
+        <span class="run-name">AI</span>
+      </div>
+    </div>
 
-      <!-- Center arena -->
-      <div class="arena">
-        <div class="arena-status" id="arenaStatus">Press "New battle" to begin.</div>
-        <div class="staging-area">
-          <div class="staging-row-wrap">
-            <span class="staging-label">P1</span>
-            <div class="staging-row" id="leftStaging"></div>
+    <!-- Shop section (shown between battles) -->
+    <section id="shopSection" hidden>
+      <div class="shop-header">
+        <span class="section-title">Shop</span>
+        <div class="shop-actions">
+          <button id="rerollBtn" class="btn-secondary">Reroll (1g)</button>
+          <button id="toBattleBtn" class="btn-primary">Battle →</button>
+        </div>
+      </div>
+      <div class="shop-cards" id="shopCards"></div>
+      <div class="shop-pile-header">
+        <span class="section-title-sm">Your pile</span>
+        <span class="pile-count" id="pileCount"></span>
+      </div>
+      <div class="shop-pile" id="shopPlayerPile"></div>
+    </section>
+
+    <!-- Battle section (shown during a battle) -->
+    <section id="battleSection" hidden>
+      <section class="battlefield">
+
+        <div class="pile-panel">
+          <div class="pile-header">
+            <span class="pile-name">You</span>
+            <span class="pile-score" id="leftScore">Score: 0</span>
           </div>
-          <div class="staging-row-wrap">
-            <span class="staging-label">P2</span>
-            <div class="staging-row" id="rightStaging"></div>
+          <div class="pile-stack-wrap" id="leftStack"></div>
+          <div class="pile-cards" id="leftCards"></div>
+        </div>
+
+        <div class="arena">
+          <div class="arena-status" id="arenaStatus"></div>
+          <div class="staging-area">
+            <div class="staging-row-wrap">
+              <span class="staging-label">You</span>
+              <div class="staging-row" id="leftStaging"></div>
+            </div>
+            <div class="staging-row-wrap">
+              <span class="staging-label">AI</span>
+              <div class="staging-row" id="rightStaging"></div>
+            </div>
           </div>
+          <div class="flip-display" id="flipDisplay"></div>
+          <div class="arena-result" id="resultDisplay"></div>
+          <button id="flipBtn" class="btn-flip" disabled>Flip Card</button>
         </div>
-        <div class="flip-display" id="flipDisplay"></div>
-        <div class="arena-result" id="resultDisplay"></div>
-      </div>
 
-      <!-- Right pile -->
-      <div class="pile-panel" id="rightPilePanel">
-        <div class="pile-header">
-          <span class="pile-name">Player 2</span>
-          <span class="pile-score" id="rightScore">Score: 0</span>
+        <div class="pile-panel">
+          <div class="pile-header">
+            <span class="pile-name">AI</span>
+            <span class="pile-score" id="rightScore">Score: 0</span>
+          </div>
+          <div class="pile-stack-wrap" id="rightStack"></div>
+          <div class="pile-cards" id="rightCards"></div>
         </div>
-        <div class="pile-stack-wrap" id="rightStack"></div>
-        <div class="pile-cards" id="rightCards"></div>
-      </div>
 
+      </section>
     </section>
 
     <section class="log-panel">
-      <div class="log-header">Battle log</div>
+      <div class="log-header">Log</div>
       <div class="log" id="log"></div>
     </section>
+
   </main>
 
-  <!-- Engine: pure logic, no DOM. Order matters: cards -> selection -> abilities -> battle. -->
+  <!-- Engine: order matters -->
   <script src="src/engine/cards.js"></script>
   <script src="src/engine/selection.js"></script>
   <script src="src/engine/abilities.js"></script>
   <script src="src/engine/battle.js"></script>
+  <script src="src/engine/run.js"></script>
+  <script src="src/engine/shop.js"></script>
 
-  <!-- Renderer: throwaway, replaced when porting to a real engine. -->
+  <!-- Renderer -->
   <script src="src/renderer/main.js"></script>
 </body>
 </html>

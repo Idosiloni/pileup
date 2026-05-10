@@ -366,3 +366,268 @@ body {
 }
 
 .log div::before { content: '> '; opacity: 0.5; }
+
+/* ------------------------------------------------------------------
+   Run status bar (HP + round + gold)
+   ------------------------------------------------------------------ */
+
+.run-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-panel);
+  border-radius: var(--radius-lg);
+  padding: 12px 18px;
+  margin-bottom: 18px;
+}
+
+.run-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.run-side-right {
+  flex-direction: row-reverse;
+}
+
+.run-name {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.hp-track {
+  flex: 1;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.hp-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--win);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.hp-fill-enemy {
+  background: var(--lose);
+}
+
+.hp-num {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 22px;
+  text-align: center;
+}
+
+.run-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 80px;
+}
+
+.run-round {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.run-gold {
+  font-size: 12px;
+  color: var(--tie);
+  font-weight: 500;
+}
+
+/* ------------------------------------------------------------------
+   Section titles
+   ------------------------------------------------------------------ */
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.section-title-sm {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------------
+   Buttons — secondary + flip
+   ------------------------------------------------------------------ */
+
+.btn-secondary {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn-secondary:hover { background: var(--bg-panel); }
+.btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-flip {
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 10px 28px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  margin-top: 14px;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.btn-flip:hover  { opacity: 0.88; }
+.btn-flip:active { transform: scale(0.97); }
+.btn-flip:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ------------------------------------------------------------------
+   Shop
+   ------------------------------------------------------------------ */
+
+.shop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.shop-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.shop-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.shop-card {
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  text-align: center;
+}
+
+.shop-card-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.shop-card-value {
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.shop-card-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.shop-card-ability-text {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.btn-buy {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  width: 100%;
+  transition: opacity 0.15s;
+}
+.btn-buy:hover    { opacity: 0.82; }
+.btn-buy:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ------------------------------------------------------------------
+   Shop — player pile
+   ------------------------------------------------------------------ */
+
+.shop-pile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.pile-count {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.shop-pile {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.shop-pile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  gap: 8px;
+}
+
+.shop-pile-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.shop-pile-value {
+  font-size: 17px;
+  font-weight: 600;
+  min-width: 20px;
+}
+
+.btn-sell {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 9px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-sell:hover    { background: var(--lose-bg); color: var(--lose); border-color: var(--lose); }
+.btn-sell:disabled { opacity: 0.35; cursor: not-allowed; }

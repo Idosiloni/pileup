@@ -301,6 +301,128 @@ function approxEqual(actual, expected, tolerance, message) {
 })();
 
 // ------------------------------------------------------------------
+// run.js
+// ------------------------------------------------------------------
+
+(function testRun() {
+  const {
+    makeRun, buyCard, sellCard, canBuy, canSell, applyBattleResult,
+    STARTING_HP, STARTING_GOLD, CARD_COST, SELL_VALUE, MAX_PILE_SIZE
+  } = require('../src/engine/run.js');
+
+  const run = makeRun();
+  assert(run.round === 1, 'makeRun: round starts at 1');
+  assert(run.playerHP === STARTING_HP, 'makeRun: playerHP is STARTING_HP');
+  assert(run.aiHP === STARTING_HP, 'makeRun: aiHP is STARTING_HP');
+  assert(run.gold === STARTING_GOLD, 'makeRun: gold is STARTING_GOLD');
+  assert(run.phase === 'shop', 'makeRun: phase is shop');
+  assert(run.playerPile.cards.length === 10, 'makeRun: player starts with 10 cards');
+
+  // starter pile has MAX_PILE_SIZE cards — can't buy until we sell one
+  assert(!canBuy(run), 'canBuy: false when pile is full (starter pile = MAX_PILE_SIZE)');
+
+  // sell one to open a slot, then buy works
+  const card = makeCard(7);
+  const firstId = run.playerPile.cards[0].id;
+  const runWithSlot = sellCard(run, firstId);
+  assert(canBuy(runWithSlot), 'canBuy: true when gold >= CARD_COST and pile not full');
+  const afterBuy = buyCard(runWithSlot, card);
+  assert(afterBuy.gold === runWithSlot.gold - CARD_COST, 'buyCard: deducts CARD_COST');
+  assert(afterBuy.playerPile.cards.length === runWithSlot.playerPile.cards.length + 1,
+    'buyCard: adds card to pile');
+  assert(afterBuy !== runWithSlot, 'buyCard: returns new state (immutable)');
+
+  // can't buy if not enough gold
+  const broke = Object.assign({}, runWithSlot, { gold: CARD_COST - 1 });
+  assert(buyCard(broke, card) === broke, 'buyCard: no-op when insufficient gold');
+  assert(!canBuy(broke), 'canBuy: false when insufficient gold');
+
+  // can't buy when pile is full
+  const fullPile = { cards: Array.from({ length: MAX_PILE_SIZE }, () => makeCard(1)), ownerId: 'p' };
+  const fullRun = Object.assign({}, run, { playerPile: fullPile });
+  assert(buyCard(fullRun, card) === fullRun, 'buyCard: no-op when pile is full');
+  assert(!canBuy(fullRun), 'canBuy: false when pile is full');
+
+  // canSell / sellCard
+  const sellId = run.playerPile.cards[0].id;
+  assert(canSell(run, sellId), 'canSell: true for a valid card id with >1 cards');
+  const afterSell = sellCard(run, sellId);
+  assert(afterSell.gold === STARTING_GOLD + SELL_VALUE, 'sellCard: adds SELL_VALUE to gold');
+  assert(afterSell.playerPile.cards.length === 9, 'sellCard: removes card from pile');
+
+  // can't sell unknown card
+  assert(sellCard(runWithSlot, 'nonexistent') === runWithSlot, 'sellCard: no-op for unknown card id');
+
+  // can't sell last card
+  const oneCard = { cards: [makeCard(5)], ownerId: 'p' };
+  const singleRun = Object.assign({}, run, { playerPile: oneCard });
+  const lastId = oneCard.cards[0].id;
+  assert(sellCard(singleRun, lastId) === singleRun, 'sellCard: no-op when selling last card');
+  assert(!canSell(singleRun, lastId), 'canSell: false when only one card left');
+
+  // applyBattleResult — player wins
+  const afterWin = applyBattleResult(run, { winner: 'player', margin: 2 });
+  assert(afterWin.aiHP === STARTING_HP - 2, 'applyBattleResult: player win damages aiHP by margin');
+  assert(afterWin.playerHP === STARTING_HP, 'applyBattleResult: player win leaves playerHP intact');
+  assert(afterWin.round === 2, 'applyBattleResult: advances round');
+  assert(afterWin.gold === STARTING_GOLD, 'applyBattleResult: refills gold');
+  assert(afterWin.phase === 'shop', 'applyBattleResult: phase back to shop when no one dies');
+
+  // applyBattleResult — ai wins
+  const afterLoss = applyBattleResult(run, { winner: 'ai', margin: 3 });
+  assert(afterLoss.playerHP === STARTING_HP - 3, 'applyBattleResult: ai win damages playerHP');
+  assert(afterLoss.aiHP === STARTING_HP, 'applyBattleResult: ai win leaves aiHP intact');
+
+  // damage caps at 3
+  const bigMargin = applyBattleResult(run, { winner: 'ai', margin: 10 });
+  assert(bigMargin.playerHP === STARTING_HP - 3, 'applyBattleResult: damage capped at 3');
+
+  // phase = 'over' when HP reaches 0
+  const nearDead = Object.assign({}, run, { playerHP: 1 });
+  const killed = applyBattleResult(nearDead, { winner: 'ai', margin: 3 });
+  assert(killed.playerHP === 0, 'applyBattleResult: HP floored at 0');
+  assert(killed.phase === 'over', 'applyBattleResult: phase is over when playerHP hits 0');
+
+  // tie — no damage
+  const afterTie = applyBattleResult(run, { winner: 'tie', margin: 0 });
+  assert(afterTie.playerHP === STARTING_HP, 'applyBattleResult: tie does no damage to player');
+  assert(afterTie.aiHP === STARTING_HP, 'applyBattleResult: tie does no damage to ai');
+})();
+
+// ------------------------------------------------------------------
+// shop.js
+// ------------------------------------------------------------------
+
+(function testShop() {
+  const { generateShop, SHOP_SIZE, REROLL_COST, SHOP_ABILITY_POOL } = require('../src/engine/shop.js');
+
+  assert(REROLL_COST === 1, 'REROLL_COST is 1');
+  assert(SHOP_SIZE === 4, 'SHOP_SIZE is 4');
+
+  const shop = generateShop();
+  assert(shop.cards.length === SHOP_SIZE, 'generateShop returns SHOP_SIZE cards');
+  assert(shop.cards.every(c => c.value >= 1 && c.value <= 10), 'shop card values are 1-10');
+
+  // deterministic rng — card 0 uses 3 calls (r, ability-pick, value); others use 2 (r, value)
+  // card 0: r=0.10 → ability; pick=0.50 → SHOP_ABILITY_POOL[1]='spite'; value=0.30 → 4
+  // card 1: r=0.25 → weight+50; value=0.70 → 8
+  // card 2: r=0.40 → weight-50; value=0.50 → 6
+  // card 3: r=0.60 → neutral;   value=0.10 → 2
+  let callCount = 0;
+  const seqRng = () => {
+    const vals = [0.10, 0.50, 0.30, 0.25, 0.70, 0.40, 0.50, 0.60, 0.10];
+    return vals[callCount++] !== undefined ? vals[callCount - 1] : 0.5;
+  };
+  const ds = generateShop(seqRng);
+  assert(ds.cards.length === SHOP_SIZE, 'deterministic shop has SHOP_SIZE cards');
+  assert(SHOP_ABILITY_POOL.indexOf(ds.cards[0].ability) !== -1,
+    'shop ability is from SHOP_ABILITY_POOL when generated');
+  assert(ds.cards[1].weight === 50, 'deterministic: card 1 has weight 50');
+  assert(ds.cards[2].weight === -50, 'deterministic: card 2 has weight -50');
+  assert(ds.cards[3].weight === 0 && !ds.cards[3].ability, 'deterministic: card 3 is neutral');
+})();
+
+// ------------------------------------------------------------------
 // Report
 // ------------------------------------------------------------------
 
