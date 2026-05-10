@@ -11,7 +11,25 @@
       "Bash(git push *)",
       "Bash(node d:\\\\pileup\\\\tests\\\\engine.test.js)",
       "Bash(cd /d d:\\\\pileup)",
-      "Bash(node tests/engine.test.js)"
+      "Bash(node tests/engine.test.js)",
+      "Bash(winget --version)",
+      "Bash(winget search *)",
+      "Bash(winget install *)",
+      "Bash(godot --path \"d:\\\\pileup\\\\godot\")",
+      "Bash(where godot *)",
+      "Bash(where godot_console)",
+      "Bash(dir \"%LOCALAPPDATA%\\\\Microsoft\\\\WinGet\\\\Links\\\\godot*\")",
+      "PowerShell(winget list --id GodotEngine.GodotEngine 2>&1)",
+      "Bash(powershell -Command \"winget list --id GodotEngine.GodotEngine\")",
+      "PowerShell(winget list --id GodotEngine.GodotEngine --accept-source-agreements 2>&1)",
+      "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\Microsoft\\\\WinGet\\\\Packages\" -ErrorAction SilentlyContinue | Select-Object Name)",
+      "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\Microsoft\\\\WinGet\" -ErrorAction SilentlyContinue | Select-Object Name, FullName)",
+      "PowerShell(Start-Process \"D:\\\\Godot\\\\Godot_v4.3-stable_win64.exe\" -ArgumentList \"--path `\"d:\\\\pileup\\\\godot`\"\")",
+      "PowerShell(Start-Process \"D:\\\\Godot\\\\Godot_v4.3-stable_win64.exe\" -ArgumentList \"--path `\"d:\\\\pileup\\\\godot`\"\" -Wait:$false)",
+      "PowerShell(Start-Process \"D:\\\\Godot\\\\Godot_v4.3-stable_win64.exe\" -ArgumentList '--path \"d:\\\\pileup\\\\godot\"')",
+      "PowerShell(Start-Process -FilePath \"D:\\\\Godot\\\\Godot_v4.3-stable_win64.exe\" -ArgumentList \"--path d:\\\\pileup\\\\godot\")",
+      "PowerShell(Start-Process -FilePath \"D:\\\\Godot\\\\Godot_v4.3-stable_win64.exe\" -ArgumentList \"--path `\"d:\\\\pileup\\\\godot`\" res://scenes/Main.tscn\")",
+      "PowerShell(Start-Process \"D:\\\\Godot\\\\Godot_v4.3-stable_win64.exe\" -ArgumentList \"--path `\"d:\\\\pileup\\\\godot`\" res://scenes/Main.tscn\")"
     ]
   }
 }

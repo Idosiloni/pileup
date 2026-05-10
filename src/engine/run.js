@@ -14,9 +14,9 @@
 var STARTING_HP    = 25;
 var STARTING_GOLD  = 10;
 var CARD_COST      = 3;
-var SELL_VALUE     = 1;
-var SELL_MANA      = 1;   // mana refund when selling a card
-var MAX_PILE_SIZE  = 10;
+var SELL_COST      = 1;   // gold cost to sell a card
+var MIN_PILE_SIZE  = 10;  // pile can never drop below this
+var MAX_PILE_SIZE  = 14;
 var UPGRADE_COST   = 3;   // mana cost to +1 a card's value
 var MANA_WIN       = 2;   // mana earned for winning a battle
 var MANA_LOSS      = 1;   // mana earned for losing a battle
@@ -43,14 +43,15 @@ function getJokersRun() {
  */
 function makeRun() {
   return {
-    round:      1,
-    playerHP:   STARTING_HP,
-    aiHP:       STARTING_HP,
-    gold:       STARTING_GOLD,
-    mana:       0,
-    joker:      null,   // active Joker id, or null
-    playerPile: getCardsRun().makeStarterPile('player'),
-    phase:      'shop'
+    round:             1,
+    playerHP:          STARTING_HP,
+    aiHP:              STARTING_HP,
+    gold:              STARTING_GOLD,
+    mana:              0,
+    joker:             null,   // active Joker id, or null
+    playerPile:        getCardsRun().makeStarterPile('player'),
+    phase:             'shop',
+    sellsUsedThisShop: 0
   };
 }
 
@@ -72,16 +73,18 @@ function buyCard(run, card) {
 
 /**
  * Remove a card from the player's pile by ID.
- * Refunds SELL_VALUE gold + SELL_MANA mana. Cannot sell the last card.
+ * Costs SELL_COST gold. Once per shop phase. Pile cannot drop below MIN_PILE_SIZE.
  */
 function sellCard(run, cardId) {
+  if (run.sellsUsedThisShop >= 1) return run;
+  if (run.gold < SELL_COST) return run;
   var remaining = run.playerPile.cards.filter(function(c) { return c.id !== cardId; });
   if (remaining.length === run.playerPile.cards.length) return run;
-  if (remaining.length === 0) return run;
+  if (remaining.length < MIN_PILE_SIZE) return run;
   return Object.assign({}, run, {
-    gold: run.gold + SELL_VALUE,
-    mana: run.mana + SELL_MANA,
-    playerPile: { cards: remaining, ownerId: run.playerPile.ownerId }
+    gold:              run.gold - SELL_COST,
+    playerPile:        { cards: remaining, ownerId: run.playerPile.ownerId },
+    sellsUsedThisShop: 1
   });
 }
 
@@ -109,7 +112,12 @@ function effectivePileCap(run) {
 }
 
 function canBuy(run)            { return run.gold >= CARD_COST && run.playerPile.cards.length < effectivePileCap(run); }
-function canSell(run, cardId)   { return run.playerPile.cards.length > 1 && run.playerPile.cards.some(function(c){ return c.id === cardId; }); }
+function canSell(run, cardId)   {
+  return run.sellsUsedThisShop < 1
+      && run.gold >= SELL_COST
+      && run.playerPile.cards.length > MIN_PILE_SIZE
+      && run.playerPile.cards.some(function(c){ return c.id === cardId; });
+}
 function canUpgrade(run)        { return run.mana >= UPGRADE_COST; }
 
 /**
@@ -150,18 +158,19 @@ function applyBattleResult(run, battleResult) {
                   : MANA_TIE) + (battleResult.jokerManaBonus || 0);
 
   return Object.assign({}, run, {
-    round:    run.round + 1,
-    gold:     STARTING_GOLD + (battleResult.goldBonus || 0),
-    mana:     run.mana + manaEarned,
-    playerHP: newPlayerHP,
-    aiHP:     newAiHP,
-    phase:    phase
+    round:             run.round + 1,
+    gold:              STARTING_GOLD + (battleResult.goldBonus || 0),
+    mana:              run.mana + manaEarned,
+    playerHP:          newPlayerHP,
+    aiHP:              newAiHP,
+    phase:             phase,
+    sellsUsedThisShop: 0
   });
 }
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    STARTING_HP, STARTING_GOLD, CARD_COST, SELL_VALUE, SELL_MANA,
+    STARTING_HP, STARTING_GOLD, CARD_COST, SELL_COST, MIN_PILE_SIZE,
     MAX_PILE_SIZE, UPGRADE_COST, MANA_WIN, MANA_LOSS, MANA_TIE,
     makeRun, buyCard, sellCard, upgradeCard, buyJoker,
     canBuy, canSell, canUpgrade, canBuyJoker, effectivePileCap,
@@ -170,7 +179,7 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 if (typeof window !== 'undefined') {
   window.PileupRun = {
-    STARTING_HP, STARTING_GOLD, CARD_COST, SELL_VALUE, SELL_MANA,
+    STARTING_HP, STARTING_GOLD, CARD_COST, SELL_COST, MIN_PILE_SIZE,
     MAX_PILE_SIZE, UPGRADE_COST, MANA_WIN, MANA_LOSS, MANA_TIE,
     makeRun, buyCard, sellCard, upgradeCard, buyJoker,
     canBuy, canSell, canUpgrade, canBuyJoker, effectivePileCap,

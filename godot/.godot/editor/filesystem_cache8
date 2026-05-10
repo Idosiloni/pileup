@@ -1,0 +1,14 @@
+ea4bc82a6ad023ab7ee23ee620429895
+::res://::1778435009
+::res://scenes/::1778434901
+Main.gd::GDScript::-1::1778434156::0::1::::<>Control<>::
+Main.tscn::PackedScene::-1::1778434901::0::1::::<><>::res://scenes/Main.gd
+::res://scripts/::1778433915
+::res://scripts/engine/::1778434046
+Abilities.gd::GDScript::-1::1778433967::0::1::::<>Node<>::
+BattleEngine.gd::GDScript::-1::1778434015::0::1::::<>Node<>::
+Cards.gd::GDScript::-1::1778433932::0::1::::<>Node<>::
+Jokers.gd::GDScript::-1::1778433983::0::1::::<>Node<>::
+RunEngine.gd::GDScript::-1::1778434036::0::1::::<>Node<>::
+Selection.gd::GDScript::-1::1778433950::0::1::::<>Node<>::
+ShopEngine.gd::GDScript::-1::1778434046::0::1::::<>Node<>::

@@ -1,0 +1,30 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Pileup"
+config/features=PackedStringArray("4.3", "Forward Plus")
+config/run/main_scene="res://scenes/Main.tscn"
+
+[autoload]
+
+Cards="*res://scripts/engine/Cards.gd"
+Selection="*res://scripts/engine/Selection.gd"
+Abilities="*res://scripts/engine/Abilities.gd"
+Jokers="*res://scripts/engine/Jokers.gd"
+BattleEngine="*res://scripts/engine/BattleEngine.gd"
+RunEngine="*res://scripts/engine/RunEngine.gd"
+ShopEngine="*res://scripts/engine/ShopEngine.gd"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

@@ -22,7 +22,7 @@
   const { simulateBattle } = window.PileupBattle;
   const { makeRun, buyCard, sellCard, upgradeCard, buyJoker, canBuy, canSell,
           canUpgrade, canBuyJoker, effectivePileCap,
-          applyBattleResult, CARD_COST, SELL_VALUE, STARTING_HP, UPGRADE_COST } = window.PileupRun;
+          applyBattleResult, CARD_COST, SELL_COST, MIN_PILE_SIZE, STARTING_HP, UPGRADE_COST } = window.PileupRun;
   const { generateShop, REROLL_COST } = window.PileupShop;
 
   const TIMING = {
@@ -278,7 +278,7 @@
       // sell button
       const sellBtn = document.createElement('button');
       sellBtn.className   = 'btn-sell';
-      sellBtn.textContent = 'Sell +' + SELL_VALUE + 'g';
+      sellBtn.textContent = 'Sell -' + SELL_COST + 'g';
       sellBtn.disabled    = !canSell(run, card.id);
       sellBtn.addEventListener('click', () => {
         run = sellCard(run, card.id);

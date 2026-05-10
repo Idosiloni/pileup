@@ -308,7 +308,7 @@ function approxEqual(actual, expected, tolerance, message) {
   const {
     makeRun, buyCard, sellCard, upgradeCard, canBuy, canSell, canUpgrade,
     applyBattleResult,
-    STARTING_HP, STARTING_GOLD, CARD_COST, SELL_VALUE, SELL_MANA,
+    STARTING_HP, STARTING_GOLD, CARD_COST, SELL_COST, MIN_PILE_SIZE,
     MAX_PILE_SIZE, UPGRADE_COST, MANA_WIN, MANA_LOSS, MANA_TIE
   } = require('../src/engine/run.js');
 
@@ -319,24 +319,22 @@ function approxEqual(actual, expected, tolerance, message) {
   assert(run.gold === STARTING_GOLD, 'makeRun: gold is STARTING_GOLD');
   assert(run.mana === 0, 'makeRun: mana starts at 0');
   assert(run.phase === 'shop', 'makeRun: phase is shop');
+  assert(run.sellsUsedThisShop === 0, 'makeRun: sellsUsedThisShop starts at 0');
   assert(run.playerPile.cards.length === 10, 'makeRun: player starts with 10 cards');
 
-  // starter pile has MAX_PILE_SIZE cards — can't buy until we sell one
-  assert(!canBuy(run), 'canBuy: false when pile is full (starter pile = MAX_PILE_SIZE)');
+  // starter pile is 10 (MIN_PILE_SIZE) and MAX_PILE_SIZE is 14 — can buy right away
+  assert(canBuy(run), 'canBuy: true when pile < MAX_PILE_SIZE');
 
-  // sell one to open a slot, then buy works
+  // buy a card
   const card = makeCard(7);
-  const firstId = run.playerPile.cards[0].id;
-  const runWithSlot = sellCard(run, firstId);
-  assert(canBuy(runWithSlot), 'canBuy: true when gold >= CARD_COST and pile not full');
-  const afterBuy = buyCard(runWithSlot, card);
-  assert(afterBuy.gold === runWithSlot.gold - CARD_COST, 'buyCard: deducts CARD_COST');
-  assert(afterBuy.playerPile.cards.length === runWithSlot.playerPile.cards.length + 1,
+  const afterBuy = buyCard(run, card);
+  assert(afterBuy.gold === run.gold - CARD_COST, 'buyCard: deducts CARD_COST');
+  assert(afterBuy.playerPile.cards.length === run.playerPile.cards.length + 1,
     'buyCard: adds card to pile');
-  assert(afterBuy !== runWithSlot, 'buyCard: returns new state (immutable)');
+  assert(afterBuy !== run, 'buyCard: returns new state (immutable)');
 
   // can't buy if not enough gold
-  const broke = Object.assign({}, runWithSlot, { gold: CARD_COST - 1 });
+  const broke = Object.assign({}, run, { gold: CARD_COST - 1 });
   assert(buyCard(broke, card) === broke, 'buyCard: no-op when insufficient gold');
   assert(!canBuy(broke), 'canBuy: false when insufficient gold');
 
@@ -346,23 +344,42 @@ function approxEqual(actual, expected, tolerance, message) {
   assert(buyCard(fullRun, card) === fullRun, 'buyCard: no-op when pile is full');
   assert(!canBuy(fullRun), 'canBuy: false when pile is full');
 
-  // canSell / sellCard
-  const sellId = run.playerPile.cards[0].id;
-  assert(canSell(run, sellId), 'canSell: true for a valid card id with >1 cards');
-  const afterSell = sellCard(run, sellId);
-  assert(afterSell.gold === STARTING_GOLD + SELL_VALUE, 'sellCard: adds SELL_VALUE to gold');
-  assert(afterSell.mana === SELL_MANA, 'sellCard: refunds SELL_MANA mana');
-  assert(afterSell.playerPile.cards.length === 9, 'sellCard: removes card from pile');
+  // canSell / sellCard — need pile > MIN_PILE_SIZE to sell
+  // Build an 11-card pile
+  const bigPileCards = Array.from({ length: MIN_PILE_SIZE + 1 }, (_, i) => makeCard(i + 1));
+  const bigPile = { cards: bigPileCards, ownerId: 'p' };
+  const bigRun = Object.assign({}, run, { playerPile: bigPile, sellsUsedThisShop: 0 });
+  const sellId = bigPileCards[0].id;
+
+  assert(canSell(bigRun, sellId), 'canSell: true when pile > MIN_PILE_SIZE and sell not used');
+  const afterSell = sellCard(bigRun, sellId);
+  assert(afterSell.gold === bigRun.gold - SELL_COST, 'sellCard: deducts SELL_COST from gold');
+  assert(afterSell.playerPile.cards.length === MIN_PILE_SIZE, 'sellCard: removes card from pile');
+  assert(afterSell.sellsUsedThisShop === 1, 'sellCard: marks sell as used this shop');
+
+  // can't sell a second time this shop
+  const secondSellId = afterSell.playerPile.cards[0].id;
+  assert(!canSell(afterSell, secondSellId), 'canSell: false after sell already used this shop');
+  assert(sellCard(afterSell, secondSellId) === afterSell, 'sellCard: no-op on second sell attempt');
+
+  // can't sell when pile is at MIN_PILE_SIZE
+  const minPile = { cards: Array.from({ length: MIN_PILE_SIZE }, () => makeCard(1)), ownerId: 'p' };
+  const minRun = Object.assign({}, run, { playerPile: minPile, sellsUsedThisShop: 0 });
+  const minId = minPile.cards[0].id;
+  assert(!canSell(minRun, minId), 'canSell: false when pile is at MIN_PILE_SIZE');
+  assert(sellCard(minRun, minId) === minRun, 'sellCard: no-op when pile is at MIN_PILE_SIZE');
+
+  // can't sell when insufficient gold
+  const brokeSell = Object.assign({}, bigRun, { gold: SELL_COST - 1 });
+  assert(!canSell(brokeSell, sellId), 'canSell: false when insufficient gold for sell cost');
 
   // can't sell unknown card
-  assert(sellCard(runWithSlot, 'nonexistent') === runWithSlot, 'sellCard: no-op for unknown card id');
+  assert(sellCard(bigRun, 'nonexistent') === bigRun, 'sellCard: no-op for unknown card id');
 
-  // can't sell last card
-  const oneCard = { cards: [makeCard(5)], ownerId: 'p' };
-  const singleRun = Object.assign({}, run, { playerPile: oneCard });
-  const lastId = oneCard.cards[0].id;
-  assert(sellCard(singleRun, lastId) === singleRun, 'sellCard: no-op when selling last card');
-  assert(!canSell(singleRun, lastId), 'canSell: false when only one card left');
+  // applyBattleResult resets sellsUsedThisShop
+  const usedSell = Object.assign({}, run, { sellsUsedThisShop: 1 });
+  const afterBattle = applyBattleResult(usedSell, { winner: 'player', margin: 1 });
+  assert(afterBattle.sellsUsedThisShop === 0, 'applyBattleResult: resets sellsUsedThisShop');
 
   // applyBattleResult — player wins
   const afterWin = applyBattleResult(run, { winner: 'player', margin: 2 });
@@ -520,7 +537,7 @@ function approxEqual(actual, expected, tolerance, message) {
   // effectivePileCap: hoarder raises to 12
   const hoarderRun = buyJoker(run, 'hoarder');
   assert(effectivePileCap(hoarderRun) === 12, 'hoarder run: effectivePileCap is 12');
-  assert(effectivePileCap(run) === 10, 'default run: effectivePileCap is 10');
+  assert(effectivePileCap(run) === 14, 'default run: effectivePileCap is MAX_PILE_SIZE (14)');
 
   // Joker integration in simulateBattle — tiebreaker
   const fixAll5 = pile => pile.cards.slice(0, 5);
