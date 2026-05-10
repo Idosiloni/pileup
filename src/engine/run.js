@@ -100,9 +100,10 @@ function canUpgrade(run)        { return run.mana >= UPGRADE_COST; }
 
 /**
  * Apply the result of a battle to the run.
- * battleResult: { winner: 'player'|'ai'|'tie', margin: number }
- * Damage is capped at 3 HP per loss. Winner earns MANA_WIN mana, loser MANA_LOSS.
- * Advances round, refills gold to STARTING_GOLD. Phase → 'over' if HP hits 0.
+ * battleResult: { winner: 'player'|'ai'|'tie', margin: number, goldBonus?: number }
+ * goldBonus — extra gold from card abilities (e.g. Comeback) earned by the player this battle.
+ * Damage is capped at 3 HP. Winner earns MANA_WIN, loser MANA_LOSS.
+ * Advances round, refills gold. Phase → 'over' if HP hits 0.
  */
 function applyBattleResult(run, battleResult) {
   var damage     = Math.min(3, battleResult.margin);
@@ -118,7 +119,7 @@ function applyBattleResult(run, battleResult) {
 
   return Object.assign({}, run, {
     round:    run.round + 1,
-    gold:     STARTING_GOLD,
+    gold:     STARTING_GOLD + (battleResult.goldBonus || 0),
     mana:     run.mana + manaEarned,
     playerHP: newPlayerHP,
     aiHP:     newAiHP,

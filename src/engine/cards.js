@@ -42,7 +42,7 @@ function makeCard(value, opts) {
  * Generate a random pile of 10 cards with values 1-10.
  * Used for prototyping and AI opponents.
  */
-var ABILITY_POOL = ['valor', 'spite', 'blaze'];
+var ABILITY_POOL = ['valor', 'spite', 'blaze', 'pierce', 'echo', 'comeback', 'anchor'];
 
 function makeRandomPile(ownerId) {
   const cards = [];

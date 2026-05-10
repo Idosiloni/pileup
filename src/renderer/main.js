@@ -69,7 +69,7 @@
   function showShopPhase() {
     $('shopSection').hidden    = false;
     $('battleSection').hidden  = true;
-    currentShop = generateShop();
+    currentShop = generateShop(run.round);
     renderShop();
     renderShopPile();
     updateRunStatus();
@@ -304,8 +304,14 @@
     // Apply to run state
     const battleWinner = result.winner === 'left' ? 'player' : result.winner === 'right' ? 'ai' : 'tie';
     const prevMana = run.mana;
-    run = applyBattleResult(run, { winner: battleWinner, margin: result.margin });
-    logLine('+' + (run.mana - prevMana) + ' mana earned (' + run.mana + 'm total)');
+    run = applyBattleResult(run, {
+      winner:    battleWinner,
+      margin:    result.margin,
+      goldBonus: result.leftGoldBonus  // player is always left in single-player
+    });
+    logLine('+' + (run.mana - prevMana) + 'm earned'
+      + (result.leftGoldBonus > 0 ? ', +' + result.leftGoldBonus + 'g comeback' : '')
+      + ' (' + run.mana + 'm total)');
     updateRunStatus();
 
     battleActive = false;
@@ -461,7 +467,7 @@
       if (!run || run.gold < REROLL_COST) return;
       run = Object.assign({}, run, { gold: run.gold - REROLL_COST });
       updateRunStatus();
-      currentShop = generateShop();
+      currentShop = generateShop(run.round);
       renderShop();
     });
 

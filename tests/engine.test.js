@@ -417,18 +417,156 @@ function approxEqual(actual, expected, tolerance, message) {
 })();
 
 // ------------------------------------------------------------------
-// shop.js
+// abilities.js (v0.6 additions)
 // ------------------------------------------------------------------
 
+(function testAbilitiesV6() {
+  const { ABILITIES, onRevealBonus, postFlipGoldBonus } = require('../src/engine/abilities.js');
+
+  assert(typeof ABILITIES.pierce   === 'object', 'ABILITIES has pierce');
+  assert(typeof ABILITIES.echo     === 'object', 'ABILITIES has echo');
+  assert(typeof ABILITIES.comeback === 'object', 'ABILITIES has comeback');
+  assert(typeof ABILITIES.anchor   === 'object', 'ABILITIES has anchor');
+
+  assert(ABILITIES.pierce.trigger   === 'on_tie',    'pierce trigger is on_tie');
+  assert(ABILITIES.echo.trigger     === 'on_reveal', 'echo trigger is on_reveal');
+  assert(ABILITIES.comeback.trigger === 'on_loss',   'comeback trigger is on_loss');
+  assert(ABILITIES.anchor.trigger   === 'passive',   'anchor trigger is passive');
+
+  assert(onRevealBonus('echo')  === 3, 'echo gives +3 on reveal');
+  assert(onRevealBonus('blaze') === 2, 'blaze still gives +2 on reveal');
+
+  // Comeback: player (left) lost by ≥3, gets +2 gold
+  const cb1 = postFlipGoldBonus('right', 'comeback', undefined, 5);
+  assert(cb1.leftGold  === 2, 'comeback: left earns 2 gold when losing by ≥3');
+  assert(cb1.rightGold === 0, 'comeback: right earns nothing here');
+
+  // Comeback: margin <3, no bonus
+  const cb2 = postFlipGoldBonus('right', 'comeback', undefined, 2);
+  assert(cb2.leftGold  === 0, 'comeback: no bonus when margin < 3');
+
+  // Comeback on right side
+  const cb3 = postFlipGoldBonus('left', undefined, 'comeback', 4);
+  assert(cb3.rightGold === 2, 'comeback: right earns 2 gold when losing by ≥3');
+})();
+
+// ------------------------------------------------------------------
+// battle.js — pierce and comeback integration
+// ------------------------------------------------------------------
+
+(function testBattleV6() {
+  const { simulateBattle } = require('../src/engine/battle.js');
+  const fix = pile => pile.cards.slice(0, 5);
+
+  // Pierce: left card ties but has pierce → counts as left win
+  const pierceLeft = [
+    makeCard(5, { ability: 'pierce' }),
+    makeCard(5), makeCard(5), makeCard(5), makeCard(5)
+  ];
+  const pierceRight = [
+    makeCard(5),
+    makeCard(5), makeCard(5), makeCard(5), makeCard(5)
+  ];
+  const pResult = simulateBattle({ cards: pierceLeft, ownerId: 'l' }, { cards: pierceRight, ownerId: 'r' }, fix);
+  assert(pResult.flips[0].winner === 'left', 'pierce: tied flip counted as left win');
+
+  // Without pierce, tie stays tie
+  const noAbility = { cards: Array.from({length:5}, () => makeCard(5)), ownerId: 'x' };
+  const tResult   = simulateBattle(noAbility, noAbility, fix);
+  assert(tResult.flips[0].winner === 'tie', 'no pierce: equal values stay tied');
+
+  // Comeback: player (left) loses by margin ≥3, earns leftGoldBonus
+  const comebackLeft  = [makeCard(1, { ability: 'comeback' }), makeCard(5), makeCard(5), makeCard(5), makeCard(5)];
+  const comebackRight = [makeCard(8),                          makeCard(1), makeCard(1), makeCard(1), makeCard(1)];
+  const cResult = simulateBattle(
+    { cards: comebackLeft,  ownerId: 'l' },
+    { cards: comebackRight, ownerId: 'r' },
+    fix
+  );
+  assert(cResult.flips[0].winner === 'right', 'comeback: left lost flip 0');
+  assert(cResult.flips[0].delta >= 3, 'comeback: margin ≥ 3');
+  assert(cResult.leftGoldBonus === 2, 'comeback: leftGoldBonus is 2 after one qualifying loss');
+
+  // Echo: +3 on reveal (similar to blaze test)
+  const echoLeft  = [makeCard(3, { ability: 'echo' }), makeCard(5), makeCard(5), makeCard(5), makeCard(5)];
+  const echoRight = [makeCard(5),                      makeCard(5), makeCard(5), makeCard(5), makeCard(5)];
+  const eResult   = simulateBattle({ cards: echoLeft, ownerId: 'l' }, { cards: echoRight, ownerId: 'r' }, fix);
+  assert(eResult.flips[0].leftEffective === 6, 'echo: effective = 3+3 = 6');
+  assert(eResult.flips[0].winner === 'left', 'echo: 3+3=6 beats 5');
+})();
+
+// ------------------------------------------------------------------
+// selection.js — anchor always flips
+// ------------------------------------------------------------------
+
+(function testSelectionAnchor() {
+  const { selectFlipped, flipProbabilities, FLIP_COUNT } = require('../src/engine/selection.js');
+
+  // Anchor card must always appear in selected 5
+  const anchorCard = makeCard(1, { ability: 'anchor' });
+  const pile = {
+    cards: [anchorCard].concat(Array.from({length:9}, () => makeCard(5))),
+    ownerId: 't'
+  };
+  let anchorAlwaysShows = true;
+  for (let i = 0; i < 50; i++) {
+    const flipped = selectFlipped(pile);
+    if (!flipped.find(c => c.id === anchorCard.id)) { anchorAlwaysShows = false; break; }
+  }
+  assert(anchorAlwaysShows, 'anchor card always appears in flipped 5');
+
+  // Anchor shows 100% in flipProbabilities
+  const probs = flipProbabilities(pile);
+  assert(probs[0] === 100, 'anchor card shows 100% flip probability');
+
+  // Multiple anchors all flip (up to FLIP_COUNT)
+  const twoAnchorPile = {
+    cards: [
+      makeCard(1, { ability: 'anchor' }),
+      makeCard(2, { ability: 'anchor' }),
+    ].concat(Array.from({length:8}, () => makeCard(5))),
+    ownerId: 't'
+  };
+  const flipped2 = selectFlipped(twoAnchorPile);
+  assert(flipped2.length === FLIP_COUNT, 'anchor: still flips FLIP_COUNT cards total');
+  const anchorIds = new Set(twoAnchorPile.cards.slice(0,2).map(c => c.id));
+  assert(flipped2.filter(c => anchorIds.has(c.id)).length === 2, 'both anchor cards always flip');
+})();
+
+// ------------------------------------------------------------------
+// shop.js
+
 (function testShop() {
-  const { generateShop, SHOP_SIZE, REROLL_COST, SHOP_ABILITY_POOL } = require('../src/engine/shop.js');
+  const { generateShop, SHOP_SIZE, REROLL_COST, SHOP_ABILITY_POOL, shopMaxValue } = require('../src/engine/shop.js');
 
   assert(REROLL_COST === 1, 'REROLL_COST is 1');
   assert(SHOP_SIZE === 4, 'SHOP_SIZE is 4');
 
-  const shop = generateShop();
-  assert(shop.cards.length === SHOP_SIZE, 'generateShop returns SHOP_SIZE cards');
-  assert(shop.cards.every(c => c.value >= 1 && c.value <= 10), 'shop card values are 1-10');
+  // Tier curve
+  assert(shopMaxValue(1) === 3,  'tier: round 1 max value 3');
+  assert(shopMaxValue(2) === 3,  'tier: round 2 max value 3');
+  assert(shopMaxValue(3) === 5,  'tier: round 3 max value 5');
+  assert(shopMaxValue(4) === 5,  'tier: round 4 max value 5');
+  assert(shopMaxValue(5) === 7,  'tier: round 5 max value 7');
+  assert(shopMaxValue(7) === 9,  'tier: round 7 max value 9');
+  assert(shopMaxValue(9) === 10, 'tier: round 9 max value 10');
+  assert(shopMaxValue(99) === 10,'tier: round 99 max value 10');
+
+  // Round-1 shop: all values ≤ 3
+  const earlyShop = generateShop(1);
+  assert(earlyShop.cards.length === SHOP_SIZE, 'generateShop(1) returns SHOP_SIZE cards');
+  assert(earlyShop.cards.every(c => c.value >= 1 && c.value <= 3), 'generateShop(1) values capped at 3');
+
+  // Round-9 shop: values can reach 10
+  // Run enough times to confirm max value > 3 (probability of all ≤3 in 200 rounds is astronomically low)
+  let seenHigh = false;
+  for (let t = 0; t < 200; t++) {
+    const s = generateShop(9);
+    if (s.cards.some(c => c.value > 3)) { seenHigh = true; break; }
+  }
+  assert(seenHigh, 'generateShop(9) eventually produces cards with value > 3');
+
+  const shop = generateShop(1);
 
   // deterministic rng — card 0 uses 3 calls (r, ability-pick, value); others use 2 (r, value)
   // card 0: r=0.10 → ability; pick=0.50 → SHOP_ABILITY_POOL[1]='spite'; value=0.30 → 4
