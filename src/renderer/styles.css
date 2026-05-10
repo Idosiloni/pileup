@@ -316,7 +316,12 @@ body {
   justify-content: center;
   font-size: 36px;
   font-weight: 500;
-  transition: background 0.4s, border-color 0.4s, opacity 0.4s;
+  transition: background 0.3s, border-color 0.3s, color 0.3s, opacity 0.4s;
+}
+.card-big.card-face-down {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: transparent;
 }
 .card-big.win  { background: var(--win-bg);  color: var(--win);  border-color: var(--win); }
 .card-big.lose { background: var(--lose-bg); color: var(--lose); border-color: var(--lose); opacity: 0.7; }

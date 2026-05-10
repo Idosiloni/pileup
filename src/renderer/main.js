@@ -3,12 +3,14 @@
  *
  * Throwaway layer. Replace entirely when porting to Godot/Unity.
  *
- * Battle animation flow:
- *   1. Render pile grids + pile stacks (count visible)
- *   2. Draw phase: 5 cards drawn one-by-one from each pile to staging rows
- *   3. The Hush: 5 face-down cards per side, pause
- *   4. Flip phase: staged cards reveal value one-by-one, big display shows matchup
- *   5. Reveal Window: unflipped cards shown in pile grid
+ * Battle flow:
+ *   For each of 5 flips:
+ *     1. Draw one card from each pile (stack count decreases)
+ *     2. Place both face-down in the center briefly
+ *     3. Flip to reveal values
+ *     4. Show win/lose/tie styling
+ *     5. Add result card to running history row
+ *   Then Reveal Window shows unflipped cards in pile grid.
  */
 
 (function () {
@@ -20,12 +22,10 @@
   const { simulateBattle } = window.PileupBattle;
 
   const TIMING = {
-    DRAW_INTERVAL: 320,    // delay between each card drawn from pile
-    DRAW_OFFSET: 110,      // extra gap between left draw and right draw per round
-    HUSH: 1400,            // The Hush — pause after all cards staged
-    FLIP_INTERVAL: 1100,   // time between flips
-    REVEAL_DELAY: 600,     // pause before Reveal Window
-    FLIP_RESULT_DELAY: 80  // delay before win/lose styling appears
+    FACE_DOWN_DURATION: 380, // ms cards sit face-down before revealing
+    FLIP_RESULT_DELAY:  100, // ms after reveal before win/lose styling
+    FLIP_INTERVAL:     1300, // total ms per flip (face-down + reveal + viewing)
+    REVEAL_DELAY:       700, // ms before Reveal Window
   };
 
   const $ = id => document.getElementById(id);
@@ -50,14 +50,10 @@
       art.appendChild(top);
     } else {
       if (count > 2) {
-        const g1 = document.createElement('div');
-        g1.className = 'stack-ghost g1';
-        art.appendChild(g1);
+        const g1 = document.createElement('div'); g1.className = 'stack-ghost g1'; art.appendChild(g1);
       }
       if (count > 1) {
-        const g2 = document.createElement('div');
-        g2.className = 'stack-ghost g2';
-        art.appendChild(g2);
+        const g2 = document.createElement('div'); g2.className = 'stack-ghost g2'; art.appendChild(g2);
       }
       const top = document.createElement('div');
       top.className = 'stack-top';
@@ -75,31 +71,50 @@
   }
 
   // ------------------------------------------------------------------
-  // Staged card helpers
+  // Flip display — face-down then reveal
   // ------------------------------------------------------------------
 
-  function addStagedCard(containerId) {
+  function showFaceDownPair() {
+    const display = $('flipDisplay');
+    display.innerHTML = '';
+    const lc = document.createElement('div');
+    lc.className = 'card-big card-face-down';
+    const vs = document.createElement('div');
+    vs.className = 'vs';
+    vs.textContent = 'vs';
+    const rc = document.createElement('div');
+    rc.className = 'card-big card-face-down';
+    display.appendChild(lc);
+    display.appendChild(vs);
+    display.appendChild(rc);
+  }
+
+  function revealFlipPair(flip) {
+    const cards = $('flipDisplay').querySelectorAll('.card-big');
+    if (cards.length < 2) return;
+    const lc = cards[0], rc = cards[1];
+    lc.classList.remove('card-face-down');
+    rc.classList.remove('card-face-down');
+    lc.textContent = cardLabel(flip.left,  flip.leftEffective);
+    rc.textContent = cardLabel(flip.right, flip.rightEffective);
+    setTimeout(() => {
+      if (flip.winner === 'left')       { lc.classList.add('win');  rc.classList.add('lose'); }
+      else if (flip.winner === 'right') { rc.classList.add('win');  lc.classList.add('lose'); }
+      else                              { lc.classList.add('tie');  rc.classList.add('tie');  }
+    }, TIMING.FLIP_RESULT_DELAY);
+  }
+
+  // ------------------------------------------------------------------
+  // Running history row (fills up one card per flip)
+  // ------------------------------------------------------------------
+
+  function addHistoryCard(containerId, label, outcome) {
     const container = $(containerId);
     const card = document.createElement('div');
-    card.className = 'card-staged';
+    card.className = 'card-staged face-up ' + outcome;
+    card.textContent = label;
     container.appendChild(card);
-    // Double rAF to trigger CSS transition after paint
     requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('visible')));
-  }
-
-  function revealStagedCard(containerId, index, displayText) {
-    const cards = $(containerId).querySelectorAll('.card-staged');
-    if (!cards[index]) return;
-    const card = cards[index];
-    card.classList.add('face-up', 'active');
-    card.textContent = displayText;
-  }
-
-  function finishStagedCard(containerId, index, outcome) {
-    const cards = $(containerId).querySelectorAll('.card-staged');
-    if (!cards[index]) return;
-    cards[index].classList.remove('active');
-    cards[index].classList.add(outcome);
   }
 
   // ------------------------------------------------------------------
@@ -152,35 +167,13 @@
   }
 
   // ------------------------------------------------------------------
-  // Arena helpers
+  // Misc helpers
   // ------------------------------------------------------------------
 
   function cardLabel(card, effective) {
     return (effective !== undefined && effective !== card.value)
       ? card.value + '→' + effective
       : String(card.value);
-  }
-
-  function showFlipPair(flip) {
-    const display = $('flipDisplay');
-    display.innerHTML = '';
-    const lc = document.createElement('div');
-    lc.className = 'card-big';
-    lc.textContent = cardLabel(flip.left, flip.leftEffective);
-    const vs = document.createElement('div');
-    vs.className = 'vs';
-    vs.textContent = 'vs';
-    const rc = document.createElement('div');
-    rc.className = 'card-big';
-    rc.textContent = cardLabel(flip.right, flip.rightEffective);
-    display.appendChild(lc);
-    display.appendChild(vs);
-    display.appendChild(rc);
-    setTimeout(() => {
-      if (flip.winner === 'left')       { lc.classList.add('win');  rc.classList.add('lose'); }
-      else if (flip.winner === 'right') { rc.classList.add('win');  lc.classList.add('lose'); }
-      else                              { lc.classList.add('tie');  rc.classList.add('tie'); }
-    }, TIMING.FLIP_RESULT_DELAY);
   }
 
   function setStatus(text) { $('arenaStatus').textContent = text; }
@@ -194,9 +187,9 @@
   }
 
   function clearArena() {
-    $('flipDisplay').innerHTML = '';
+    $('flipDisplay').innerHTML  = '';
     $('resultDisplay').innerHTML = '';
-    $('leftStaging').innerHTML = '';
+    $('leftStaging').innerHTML  = '';
     $('rightStaging').innerHTML = '';
   }
 
@@ -214,61 +207,67 @@
     $('log').innerHTML = '';
     clearArena();
 
-    const leftPile = makeRandomPile('p1');
+    const leftPile  = makeRandomPile('p1');
     const rightPile = makeRandomPile('p2');
 
     logLine('P1: [' + leftPile.cards.map(c => c.value).join(', ') + ']');
     logLine('P2: [' + rightPile.cards.map(c => c.value).join(', ') + ']');
 
-    renderPile('leftCards', leftPile, null, false);
+    renderPile('leftCards',  leftPile,  null, false);
     renderPile('rightCards', rightPile, null, false);
-    renderPileStack('leftStack', 10);
+    renderPileStack('leftStack',  10);
     renderPileStack('rightStack', 10);
-    $('leftScore').textContent = 'Score: 0';
+    $('leftScore').textContent  = 'Score: 0';
     $('rightScore').textContent = 'Score: 0';
 
-    // Run engine now; animation is a replay of the result.
+    // Engine runs the full battle deterministically; animation is a replay.
     const result = simulateBattle(leftPile, rightPile, selectFlipped);
 
-    // Draw phase: one card at a time from each pile into staging rows.
-    setStatus('Selecting 5 cards from each pile…');
-    for (let i = 0; i < FLIP_COUNT; i++) {
-      await sleep(TIMING.DRAW_INTERVAL);
-      renderPileStack('leftStack', 10 - i - 1);
-      addStagedCard('leftStaging');
-      await sleep(TIMING.DRAW_OFFSET);
-      renderPileStack('rightStack', 10 - i - 1);
-      addStagedCard('rightStaging');
-    }
-
-    // The Hush — 5 face-down cards per side, deliberate pause.
-    setStatus('The Hush — five chosen, none revealed.');
-    await sleep(TIMING.HUSH);
-
-    // Flip phase.
     let leftScore = 0, rightScore = 0;
+    const leftFlippedSet  = new Set();
+    const rightFlippedSet = new Set();
+
     for (let i = 0; i < result.flips.length; i++) {
       const flip = result.flips[i];
-      setStatus('Flip ' + (i + 1) + ' of ' + result.flips.length);
 
-      // Reveal staged card values.
-      revealStagedCard('leftStaging',  i, cardLabel(flip.left,  flip.leftEffective));
-      revealStagedCard('rightStaging', i, cardLabel(flip.right, flip.rightEffective));
+      // Both players draw one card from their pile.
+      renderPileStack('leftStack',  10 - i - 1);
+      renderPileStack('rightStack', 10 - i - 1);
+      setStatus('Flip ' + (i + 1) + ' of ' + FLIP_COUNT);
 
-      showFlipPair(flip);
+      // Cards placed face-down on the table.
+      showFaceDownPair();
+      await sleep(TIMING.FACE_DOWN_DURATION);
 
-      if (flip.winner === 'left')       leftScore += 1;
-      else if (flip.winner === 'right') rightScore += 1;
+      // Flip — reveal values and outcome.
+      revealFlipPair(flip);
+
+      // Brief pause before updating scores and history.
+      await sleep(TIMING.FLIP_RESULT_DELAY + 120);
+
+      if (flip.winner === 'left')       leftScore++;
+      else if (flip.winner === 'right') rightScore++;
       $('leftScore').textContent  = 'Score: ' + leftScore;
       $('rightScore').textContent = 'Score: ' + rightScore;
 
-      // Log this flip.
-      const lVal = cardLabel(flip.left,  flip.leftEffective);
-      const rVal = cardLabel(flip.right, flip.rightEffective);
+      // Running history rows.
+      const lOutcome = flip.winner === 'left'  ? 'win' : flip.winner === 'tie' ? 'tie' : 'lose';
+      const rOutcome = flip.winner === 'right' ? 'win' : flip.winner === 'tie' ? 'tie' : 'lose';
+      addHistoryCard('leftStaging',  cardLabel(flip.left,  flip.leftEffective),  lOutcome);
+      addHistoryCard('rightStaging', cardLabel(flip.right, flip.rightEffective), rOutcome);
+
+      // Highlight drawn card in pile grid live.
+      leftFlippedSet.add(flip.left.id);
+      rightFlippedSet.add(flip.right.id);
+      renderPile('leftCards',  leftPile,  leftFlippedSet,  false);
+      renderPile('rightCards', rightPile, rightFlippedSet, false);
+
+      // Log.
       const winnerText = flip.winner === 'tie'
         ? 'tie'
         : 'P' + (flip.winner === 'left' ? '1' : '2') + ' wins by ' + flip.delta;
-      logLine('Flip ' + (i + 1) + ': P1 ' + lVal + ' vs P2 ' + rVal + ' — ' + winnerText);
+      logLine('Flip ' + (i + 1) + ': P1 ' + cardLabel(flip.left, flip.leftEffective)
+        + ' vs P2 ' + cardLabel(flip.right, flip.rightEffective) + ' — ' + winnerText);
       flip.events.forEach(ev => {
         if (ev.trigger && ev.ability) {
           const who  = ev.side === 'left' ? 'P1' : 'P2';
@@ -278,22 +277,16 @@
         }
       });
 
-      await sleep(TIMING.FLIP_RESULT_DELAY);
-      const lOutcome = flip.winner === 'left'  ? 'win' : flip.winner === 'tie' ? 'tie' : 'lose';
-      const rOutcome = flip.winner === 'right' ? 'win' : flip.winner === 'tie' ? 'tie' : 'lose';
-      finishStagedCard('leftStaging',  i, lOutcome);
-      finishStagedCard('rightStaging', i, rOutcome);
-
-      await sleep(TIMING.FLIP_INTERVAL - TIMING.FLIP_RESULT_DELAY);
+      // Wait the remaining time before the next flip starts.
+      const elapsed = TIMING.FACE_DOWN_DURATION + TIMING.FLIP_RESULT_DELAY + 120;
+      await sleep(TIMING.FLIP_INTERVAL - elapsed);
     }
 
-    // Reveal Window — unflipped cards briefly shown in pile grid.
+    // Reveal Window — the 5 cards that stayed home briefly shown.
     await sleep(TIMING.REVEAL_DELAY);
     setStatus('Reveal Window — unflipped cards shown.');
-    const leftFlippedIds  = new Set(result.leftFlipped.map(c => c.id));
-    const rightFlippedIds = new Set(result.rightFlipped.map(c => c.id));
-    renderPile('leftCards',  leftPile,  leftFlippedIds,  true);
-    renderPile('rightCards', rightPile, rightFlippedIds, true);
+    renderPile('leftCards',  leftPile,  leftFlippedSet,  true);
+    renderPile('rightCards', rightPile, rightFlippedSet, true);
 
     const winText = result.winner === 'tie'
       ? 'Battle tied ' + leftScore + '–' + rightScore
