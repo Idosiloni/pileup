@@ -1,29 +1,29 @@
 extends Control
 
-# ── signals ──────────────────────────────────────────────────────────────────
+# ── signals ───────────────────────────────────────────────────────────────────
 signal flip_continue_pressed
 
-# ── state ────────────────────────────────────────────────────────────────────
-var run_state:           Dictionary = {}
-var current_shop:        Dictionary = {}
-var battle_active:       bool       = false
-var selected_pile_idx:   int        = -1
-var pending_power_up_id: String     = ""
-var pending_power_up_cost: int      = 0
+# ── state ─────────────────────────────────────────────────────────────────────
+var run_state:             Dictionary = {}
+var current_shop:          Dictionary = {}
+var battle_active:         bool       = false
+var selected_pile_idx:     int        = -1
+var pending_power_up_id:   String     = ""
+var pending_power_up_cost: int        = 0
 
 # ── ui refs ───────────────────────────────────────────────────────────────────
 var status_bar:           Control
 var player_hp_label:      Label
 var ai_hp_label:          Label
 var gold_label:           Label
-var mana_label:           Label
 var round_label:          Label
 var joker_status_label:   Label
 
 var shop_section:         Control
 var shop_cards_row:       HBoxContainer
+var joker_section:        Control   # entire joker block (shown only on rounds 3 & 6)
 var joker_shop_row:       HBoxContainer
-var joker_hint_label:     Label
+var joker_next_label:     Label     # "Next joker shop: round X"
 var pile_count_label:     Label
 var pile_stats_label:     Label
 var pile_cards_row:       HBoxContainer
@@ -40,36 +40,60 @@ var result_label:         Label
 var flip_btn:             Button
 
 var log_list:             VBoxContainer
+var perk_overlay:         Control = null
 
 # ── palette ───────────────────────────────────────────────────────────────────
-const C_BG      = Color(0.06, 0.06, 0.10)
-const C_PANEL   = Color(0.10, 0.10, 0.17)
-const C_CARD    = Color(0.13, 0.13, 0.22)
-const C_SEL     = Color(0.18, 0.18, 0.30)
-const C_BTN     = Color(0.18, 0.20, 0.30)
-const C_ACCENT  = Color(0.95, 0.78, 0.20)
-const C_WIN     = Color(0.22, 0.85, 0.45)
-const C_LOSE    = Color(0.90, 0.25, 0.25)
-const C_TIE     = Color(0.85, 0.80, 0.25)
-const C_TEXT    = Color(0.92, 0.92, 0.96)
-const C_DIM     = Color(0.48, 0.48, 0.60)
-const C_GOLD    = Color(1.00, 0.82, 0.20)
-const C_MANA    = Color(0.45, 0.65, 1.00)
-const C_SELL    = Color(0.90, 0.28, 0.28)
-const C_FREEZE  = Color(0.22, 0.55, 0.80)
+const C_BG       = Color(0.05, 0.05, 0.09)
+const C_PANEL    = Color(0.09, 0.09, 0.15)
+const C_CARD     = Color(0.11, 0.11, 0.20)
+const C_SEL      = Color(0.16, 0.16, 0.28)
+const C_BTN      = Color(0.16, 0.18, 0.28)
+const C_ACCENT   = Color(0.95, 0.78, 0.20)
+const C_WIN      = Color(0.22, 0.85, 0.45)
+const C_LOSE     = Color(0.90, 0.25, 0.25)
+const C_TIE      = Color(0.85, 0.80, 0.25)
+const C_TEXT     = Color(0.92, 0.92, 0.96)
+const C_DIM      = Color(0.45, 0.45, 0.58)
+const C_GOLD     = Color(1.00, 0.82, 0.20)
+const C_MANA     = Color(0.45, 0.65, 1.00)
+const C_SELL     = Color(0.85, 0.22, 0.22)
+const C_FREEZE   = Color(0.22, 0.55, 0.80)
+const C_COMMON   = Color(0.55, 0.55, 0.65)
+const C_UNCOMMON = Color(0.35, 0.65, 1.00)
+const C_RARE     = Color(1.00, 0.75, 0.10)
+const C_JOKER    = Color(0.65, 0.30, 1.00)
 
 func ability_color(abl: String) -> Color:
 	match abl:
-		"valor":    return Color(1.00, 0.80, 0.20)
-		"spite":    return Color(0.90, 0.30, 0.30)
-		"blaze":    return Color(1.00, 0.55, 0.15)
-		"pierce":   return Color(0.75, 0.80, 0.95)
-		"echo":     return Color(0.70, 0.40, 1.00)
-		"comeback": return Color(0.22, 0.85, 0.45)
-		"anchor":   return Color(0.30, 0.65, 1.00)
+		"valor":      return Color(1.00, 0.80, 0.20)
+		"spite":      return Color(0.90, 0.30, 0.30)
+		"blaze":      return Color(1.00, 0.55, 0.15)
+		"martyr":     return Color(0.80, 0.50, 0.90)
+		"spotlight":  return Color(0.98, 0.95, 0.50)
+		"pierce":     return Color(0.75, 0.80, 0.95)
+		"echo":       return Color(0.70, 0.40, 1.00)
+		"comeback":   return Color(0.22, 0.85, 0.45)
+		"coin_press": return Color(1.00, 0.75, 0.10)
+		"shield":     return Color(0.40, 0.70, 1.00)
+		"anchor":     return Color(0.30, 0.65, 1.00)
+		"stage_hog":  return Color(1.00, 0.45, 0.75)
+		"eclipse":    return Color(0.55, 0.20, 0.95)
+		"storm":      return Color(0.45, 0.85, 1.00)
+		"avenger":    return Color(0.95, 0.25, 0.40)
+		"phoenix":    return Color(1.00, 0.60, 0.20)
+		"draw_power": return Color(0.80, 0.75, 0.20)
+		"resilience": return Color(0.40, 0.80, 0.60)
+		"bounty":     return Color(0.95, 0.85, 0.10)
 	return Color(0.30, 0.30, 0.42)
 
-# ── boot ─────────────────────────────────────────────────────────────────────
+func rarity_color(rarity: String) -> Color:
+	match rarity:
+		"common":   return C_COMMON
+		"uncommon": return C_UNCOMMON
+		"rare":     return C_RARE
+	return C_DIM
+
+# ── boot ──────────────────────────────────────────────────────────────────────
 func _ready() -> void:
 	_build_ui()
 
@@ -93,7 +117,7 @@ func _build_ui() -> void:
 	_spacer(outer)
 
 	var root = VBoxContainer.new()
-	root.custom_minimum_size.x = 980
+	root.custom_minimum_size.x = 1000
 	root.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	root.size_flags_vertical   = Control.SIZE_EXPAND_FILL
 	root.add_theme_constant_override("separation", 8)
@@ -118,8 +142,7 @@ func _build_ui() -> void:
 	root.add_child(battle_section)
 	_build_battle_section(battle_section)
 
-	# log
-	var log_wrap = _panel(root, Color(0.08, 0.08, 0.13), 8)
+	var log_wrap = _panel(root, Color(0.07, 0.07, 0.12), 8)
 	log_wrap.custom_minimum_size.y = 90
 	var log_scroll = ScrollContainer.new()
 	log_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -137,24 +160,24 @@ func _build_header(parent: Control) -> void:
 
 	var title = Label.new()
 	title.text = "PILEUP"
-	title.add_theme_font_size_override("font_size", 26)
+	title.add_theme_font_size_override("font_size", 28)
 	title.add_theme_color_override("font_color", C_ACCENT)
 	hdr.add_child(title)
 
 	_spacer(hdr)
 
-	var new_run_btn = _btn(hdr, "New Run", Color(0.18, 0.50, 0.25))
+	var new_run_btn = _btn(hdr, "New Run", Color(0.16, 0.48, 0.22))
 	new_run_btn.custom_minimum_size.x = 100
 	new_run_btn.pressed.connect(_on_new_run)
 
 func _build_status_bar(parent: Control) -> void:
-	status_bar = _panel(parent, Color(0.09, 0.09, 0.16), 10)
+	status_bar = _panel(parent, Color(0.08, 0.08, 0.14), 10)
 	status_bar.hide()
 	var row = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	status_bar.add_child(row)
 
-	# Player
+	# Player HP
 	var pl = HBoxContainer.new()
 	pl.add_theme_constant_override("separation", 8)
 	row.add_child(pl)
@@ -164,7 +187,7 @@ func _build_status_bar(parent: Control) -> void:
 
 	_spacer(row)
 
-	# Center
+	# Center: round, resources, jokers
 	var center = VBoxContainer.new()
 	center.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_child(center)
@@ -175,17 +198,15 @@ func _build_status_bar(parent: Control) -> void:
 	cur.alignment = BoxContainer.ALIGNMENT_CENTER
 	cur.add_theme_constant_override("separation", 16)
 	center.add_child(cur)
-	gold_label = _lbl(cur, "10g", C_GOLD)
+	gold_label = _lbl(cur, "7g", C_GOLD)
 	gold_label.add_theme_font_size_override("font_size", 15)
-	mana_label = _lbl(cur, "0m", C_MANA)
-	mana_label.add_theme_font_size_override("font_size", 15)
-	joker_status_label = _lbl(center, "", C_ACCENT)
+	joker_status_label = _lbl(center, "", C_JOKER)
 	joker_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	joker_status_label.add_theme_font_size_override("font_size", 11)
 
 	_spacer(row)
 
-	# AI
+	# AI HP
 	var ai = HBoxContainer.new()
 	ai.add_theme_constant_override("separation", 8)
 	row.add_child(ai)
@@ -194,7 +215,7 @@ func _build_status_bar(parent: Control) -> void:
 	_lbl(ai, "AI", C_DIM).add_theme_font_size_override("font_size", 11)
 
 func _build_shop_section(parent: Control) -> void:
-	# ── top action bar ────────────────────────────────────────────────────────
+	# ── action bar ─────────────────────────────────────────────────────────────
 	var actions = HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 10)
 	parent.add_child(actions)
@@ -202,43 +223,54 @@ func _build_shop_section(parent: Control) -> void:
 	_spacer(actions)
 	var reroll_btn = _btn(actions, "Reroll  1g", C_FREEZE)
 	reroll_btn.pressed.connect(_on_reroll)
-	var battle_btn = _btn(actions, "⚔  Battle", Color(0.45, 0.22, 0.12))
+	var battle_btn = _btn(actions, "⚔  Battle", Color(0.50, 0.22, 0.12))
 	battle_btn.pressed.connect(_on_go_battle)
 
-	# ── card packs ────────────────────────────────────────────────────────────
-	_section_header(parent, "CARD PACKS", "Buy a random card")
+	# ── card packs ─────────────────────────────────────────────────────────────
+	_section_header(parent, "CARD PACKS", "Buy a random card within a value range")
 	var packs_wrap = _panel(parent, Color(0.09, 0.09, 0.15), 14)
 	shop_cards_row = HBoxContainer.new()
 	shop_cards_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	shop_cards_row.add_theme_constant_override("separation", 16)
 	packs_wrap.add_child(shop_cards_row)
 
-	# ── power-ups ─────────────────────────────────────────────────────────────
-	_section_header(parent, "POWER UPS", "Apply an ability to a pile card")
+	# ── power-ups ──────────────────────────────────────────────────────────────
+	_section_header(parent, "POWER UPS", "Apply an ability to a pile card  —  stacks with existing abilities")
 	var pow_wrap = _panel(parent, Color(0.09, 0.09, 0.15), 14)
-	shop_cards_row  # (re-used slot — power-ups use their own container below)
 	var pow_inner = HBoxContainer.new()
 	pow_inner.alignment = BoxContainer.ALIGNMENT_CENTER
 	pow_inner.add_theme_constant_override("separation", 16)
 	pow_wrap.add_child(pow_inner)
-	# store reference so we can rebuild it
 	pow_wrap.set_meta("inner", pow_inner)
 	parent.set_meta("pow_wrap", pow_wrap)
 
-	# ── joker ─────────────────────────────────────────────────────────────────
+	# ── joker (rounds 3 & 6 only) ──────────────────────────────────────────────
+	joker_section = VBoxContainer.new()
+	joker_section.add_theme_constant_override("separation", 6)
+	parent.add_child(joker_section)
+
 	var j_hdr = HBoxContainer.new()
-	parent.add_child(j_hdr)
-	_lbl(j_hdr, "JOKER", C_DIM).add_theme_font_size_override("font_size", 11)
+	joker_section.add_child(j_hdr)
+	var j_title = _lbl(j_hdr, "JOKER", C_JOKER)
+	j_title.add_theme_font_size_override("font_size", 11)
 	_spacer(j_hdr)
-	joker_hint_label = _lbl(j_hdr, "One Joker per run", C_DIM)
-	joker_hint_label.add_theme_font_size_override("font_size", 11)
-	var joker_wrap = _panel(parent, Color(0.09, 0.09, 0.15), 12)
+	joker_next_label = _lbl(j_hdr, "", C_DIM)
+	joker_next_label.add_theme_font_size_override("font_size", 11)
+
+	var joker_wrap = _panel(joker_section, Color(0.10, 0.07, 0.18), 12)
+	var joker_sb = joker_wrap.get_theme_stylebox("panel").duplicate()
+	joker_sb.border_width_left   = 1
+	joker_sb.border_width_right  = 1
+	joker_sb.border_width_top    = 1
+	joker_sb.border_width_bottom = 1
+	joker_sb.border_color = Color(0.45, 0.20, 0.70, 0.6)
+	joker_wrap.add_theme_stylebox_override("panel", joker_sb)
 	joker_shop_row = HBoxContainer.new()
 	joker_shop_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	joker_shop_row.add_theme_constant_override("separation", 16)
 	joker_wrap.add_child(joker_shop_row)
 
-	# ── your pile ─────────────────────────────────────────────────────────────
+	# ── your pile ──────────────────────────────────────────────────────────────
 	var pile_hdr = HBoxContainer.new()
 	pile_hdr.add_theme_constant_override("separation", 10)
 	parent.add_child(pile_hdr)
@@ -250,7 +282,7 @@ func _build_shop_section(parent: Control) -> void:
 	pile_stats_label.add_theme_font_size_override("font_size", 11)
 
 	var pile_wrap = _panel(parent, Color(0.09, 0.09, 0.15), 12)
-	pile_wrap.custom_minimum_size.y = 130
+	pile_wrap.custom_minimum_size.y = 140
 	var pile_scroll = ScrollContainer.new()
 	pile_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pile_scroll.vertical_scroll_mode  = ScrollContainer.SCROLL_MODE_DISABLED
@@ -259,7 +291,7 @@ func _build_shop_section(parent: Control) -> void:
 	pile_cards_row.add_theme_constant_override("separation", 10)
 	pile_scroll.add_child(pile_cards_row)
 
-	selected_card_panel = _panel(parent, Color(0.12, 0.12, 0.20), 14)
+	selected_card_panel = _panel(parent, Color(0.11, 0.11, 0.20), 14)
 	selected_card_panel.hide()
 
 func _section_header(parent: Control, title: String, hint: String) -> void:
@@ -275,14 +307,12 @@ func _build_battle_section(parent: Control) -> void:
 	field.add_theme_constant_override("separation", 12)
 	parent.add_child(field)
 
-	# left pile label
 	var left_col = VBoxContainer.new()
 	left_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	field.add_child(left_col)
 	_lbl(left_col, "YOU", C_TEXT).add_theme_font_size_override("font_size", 13)
 	left_score_label = _lbl(left_col, "Score: 0", C_DIM)
 
-	# arena center
 	var arena = VBoxContainer.new()
 	arena.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	arena.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -293,7 +323,7 @@ func _build_battle_section(parent: Control) -> void:
 	arena_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	arena_status_label.add_theme_font_size_override("font_size", 12)
 
-	var stag_panel = _panel(arena, Color(0.10, 0.10, 0.18), 10)
+	var stag_panel = _panel(arena, Color(0.09, 0.09, 0.16), 10)
 	var stag_col = VBoxContainer.new()
 	stag_col.add_theme_constant_override("separation", 6)
 	stag_panel.add_child(stag_col)
@@ -321,12 +351,11 @@ func _build_battle_section(parent: Control) -> void:
 	result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result_label.add_theme_font_size_override("font_size", 20)
 
-	flip_btn = _btn(arena, "Flip Card", Color(0.25, 0.35, 0.58))
+	flip_btn = _btn(arena, "Flip Card", Color(0.22, 0.32, 0.55))
 	flip_btn.custom_minimum_size = Vector2(160, 44)
 	flip_btn.disabled = true
 	flip_btn.pressed.connect(_on_flip_btn)
 
-	# right pile label
 	var right_col = VBoxContainer.new()
 	right_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	field.add_child(right_col)
@@ -339,8 +368,9 @@ func _build_battle_section(parent: Control) -> void:
 # ── card visual ───────────────────────────────────────────────────────────────
 func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 		selected: bool = false, prob: int = -1) -> PanelContainer:
-	var abl    = card.get("ability", "")
-	var border = ability_color(abl) if not abl.is_empty() else Color(0.25, 0.25, 0.38)
+	var abls   = card.get("abilities", [])
+	var first_abl = abls[0] if not abls.is_empty() else ""
+	var border = ability_color(first_abl) if not first_abl.is_empty() else Color(0.22, 0.22, 0.36)
 
 	var cp = PanelContainer.new()
 	cp.custom_minimum_size = Vector2(w, h)
@@ -351,13 +381,15 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 	sb.border_width_right  = 2
 	sb.border_width_top    = 2
 	sb.border_width_bottom = 2
-	sb.border_color = border if (selected or not abl.is_empty()) else Color(0.22, 0.22, 0.35)
+	sb.border_color = C_ACCENT if selected else (border if not abls.is_empty() else Color(0.20, 0.20, 0.34))
 	if selected:
-		sb.border_color  = C_ACCENT
-		sb.border_width_left = sb.border_width_right = sb.border_width_top = sb.border_width_bottom = 3
-	sb.shadow_color  = Color(0, 0, 0, 0.5)
-	sb.shadow_size   = 4
-	sb.shadow_offset = Vector2(0, 2)
+		sb.border_width_left   = 3
+		sb.border_width_right  = 3
+		sb.border_width_top    = 3
+		sb.border_width_bottom = 3
+	sb.shadow_color  = Color(0, 0, 0, 0.55)
+	sb.shadow_size   = 5
+	sb.shadow_offset = Vector2(0, 3)
 	sb.set_content_margin_all(6)
 	cp.add_theme_stylebox_override("panel", sb)
 	parent.add_child(cp)
@@ -369,22 +401,22 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 	col.add_theme_constant_override("separation", 2)
 	cp.add_child(col)
 
-	# value — big and centred
+	# value
 	var val_lbl = Label.new()
 	val_lbl.text = str(card["value"])
 	val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	val_lbl.add_theme_font_size_override("font_size", 34 if h >= 110 else 20)
+	val_lbl.add_theme_font_size_override("font_size", 36 if h >= 110 else 22)
 	val_lbl.add_theme_color_override("font_color", C_TEXT)
 	val_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(val_lbl)
 
-	# ability name
-	if not abl.is_empty():
+	# ability labels (all of them)
+	for abl in abls:
 		var al = Label.new()
-		al.text = ability_text(abl)
+		al.text = _ability_short(abl)
 		al.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		al.add_theme_font_size_override("font_size", 9)
-		al.add_theme_color_override("font_color", border)
+		al.add_theme_font_size_override("font_size", 8)
+		al.add_theme_color_override("font_color", ability_color(abl))
 		al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		col.add_child(al)
 
@@ -394,7 +426,7 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 		var wl = Label.new()
 		wl.text = ("+" if wt > 0 else "") + str(wt) + "w"
 		wl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		wl.add_theme_font_size_override("font_size", 9)
+		wl.add_theme_font_size_override("font_size", 8)
 		wl.add_theme_color_override("font_color", C_WIN if wt > 0 else C_LOSE)
 		col.add_child(wl)
 
@@ -403,45 +435,53 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 		var pl = Label.new()
 		pl.text = str(prob) + "%"
 		pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		pl.add_theme_font_size_override("font_size", 9)
+		pl.add_theme_font_size_override("font_size", 8)
 		pl.add_theme_color_override("font_color", C_DIM)
 		col.add_child(pl)
 
 	return cp
 
-# ── run status ────────────────────────────────────────────────────────────────
-func _update_status() -> void:
-	player_hp_label.text    = str(run_state["player_hp"]) + " HP"
-	ai_hp_label.text        = str(run_state["ai_hp"])     + " HP"
-	gold_label.text         = str(run_state["gold"])      + "g"
-	mana_label.text         = str(run_state["mana"])      + "m"
-	round_label.text        = "Round " + str(run_state["round"])
-	var jid = run_state.get("joker", "")
-	joker_status_label.text = Jokers.JOKERS[jid]["name"] if not jid.is_empty() else ""
+# Abbreviated label for small card display
+func _ability_short(abl: String) -> String:
+	if not Abilities.ABILITIES.has(abl): return abl
+	return Abilities.ABILITIES[abl]["label"]
 
-# ── shop phase ────────────────────────────────────────────────────────────────
+# ── run status ─────────────────────────────────────────────────────────────────
+func _update_status() -> void:
+	player_hp_label.text = str(run_state["player_hp"]) + " HP"
+	ai_hp_label.text     = str(run_state["ai_hp"])     + " HP"
+	gold_label.text      = str(run_state["gold"])      + "g"
+	round_label.text     = "Round " + str(run_state["round"])
+	var joker_ids   = run_state.get("jokers", [])
+	var joker_names = joker_ids.map(func(j): return Jokers.JOKERS[j]["name"])
+	joker_status_label.text = "  •  ".join(joker_names) if not joker_names.is_empty() else ""
+
+# ── shop phase ─────────────────────────────────────────────────────────────────
 func show_shop_phase() -> void:
 	battle_section.hide()
 	shop_section.show()
 	selected_pile_idx    = -1
 	pending_power_up_id  = ""
-	current_shop         = ShopEngine.generate_shop(run_state["round"])
+	current_shop = ShopEngine.generate_shop(run_state["round"], run_state.get("jokers", []))
 	render_shop_packs()
 	render_shop_power_ups()
 	render_joker_shop()
 	render_pile_cards()
 	_update_status()
+	# Show perk on status bar
+	var perk_id = run_state.get("perk", "")
+	if perk_id != "" and RunEngine.PERKS.has(perk_id):
+		joker_status_label.text = "[" + RunEngine.PERKS[perk_id]["name"] + "]  " + joker_status_label.text
 
 func render_shop_packs() -> void:
 	for c in shop_cards_row.get_children(): c.queue_free()
 	for pack in current_shop["packs"]:
 		var wrap = VBoxContainer.new()
 		wrap.add_theme_constant_override("separation", 8)
-		wrap.custom_minimum_size.x = 140
+		wrap.custom_minimum_size.x = 150
 		shop_cards_row.add_child(wrap)
 
-		# pack visual
-		var pp = _panel(wrap, Color(0.12, 0.15, 0.22), 14)
+		var pp = _panel(wrap, Color(0.11, 0.14, 0.22), 14)
 		var pc = VBoxContainer.new()
 		pc.alignment = BoxContainer.ALIGNMENT_CENTER
 		pc.add_theme_constant_override("separation", 6)
@@ -454,8 +494,7 @@ func render_shop_packs() -> void:
 		hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 		var can = RunEngine.can_buy_pack(run_state, pack)
-		var bb  = _btn(wrap, str(pack["cost"]) + "g  Buy",
-			Color(0.20, 0.45, 0.20) if can else Color(0.12, 0.15, 0.12))
+		var bb  = _cost_btn(wrap, pack["cost"], "Buy Pack", Color(0.18, 0.42, 0.18) if can else Color(0.10, 0.14, 0.10))
 		bb.disabled = not can
 		var pref = pack
 		bb.pressed.connect(func():
@@ -471,30 +510,48 @@ func render_shop_power_ups() -> void:
 	for c in inner.get_children(): c.queue_free()
 
 	for abl_id in current_shop["power_ups"]:
-		var cost = ShopEngine.POWER_UP_COSTS[abl_id]
+		if not Abilities.ABILITIES.has(abl_id): continue
 		var abl  = Abilities.ABILITIES[abl_id]
+		var cost = RunEngine.effective_power_up_cost(run_state, abl["cost"])
 		var col  = ability_color(abl_id)
+		var rar  = abl.get("rarity", "common")
 		var can  = run_state["gold"] >= cost
 
 		var wrap = VBoxContainer.new()
 		wrap.add_theme_constant_override("separation", 8)
-		wrap.custom_minimum_size.x = 140
+		wrap.custom_minimum_size.x = 148
 		inner.add_child(wrap)
 
-		var pp = _panel(wrap, Color(0.10, 0.10, 0.18).lerp(col, 0.06), 14)
+		var pp = _panel(wrap, Color(0.10, 0.10, 0.18).lerp(col, 0.07), 14)
+		# Rarity border
+		var pp_sb = pp.get_theme_stylebox("panel").duplicate()
+		pp_sb.border_width_left   = 2
+		pp_sb.border_width_right  = 2
+		pp_sb.border_width_top    = 2
+		pp_sb.border_width_bottom = 2
+		pp_sb.border_color = rarity_color(rar)
+		pp.add_theme_stylebox_override("panel", pp_sb)
+
 		var pc = VBoxContainer.new()
 		pc.alignment = BoxContainer.ALIGNMENT_CENTER
 		pc.add_theme_constant_override("separation", 4)
 		pp.add_child(pc)
+
+		# Rarity tag
+		var rar_lbl = _lbl(pc, rar.to_upper(), rarity_color(rar))
+		rar_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		rar_lbl.add_theme_font_size_override("font_size", 9)
+
 		var nl = _lbl(pc, abl["label"], col)
-		nl.add_theme_font_size_override("font_size", 14)
+		nl.add_theme_font_size_override("font_size", 15)
 		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		var dl = _lbl(pc, abl["description"], C_DIM)
 		dl.add_theme_font_size_override("font_size", 10)
 		dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
-		var bb = _btn(wrap, str(cost) + "g  Apply to card",
-			col.darkened(0.4) if can else Color(0.12, 0.12, 0.18))
+		var bb = _cost_btn(wrap, cost, "Apply to Card",
+			col.darkened(0.45) if can else Color(0.10, 0.10, 0.16))
 		bb.disabled = not can
 		var aid_ref  = abl_id
 		var cost_ref = cost
@@ -507,54 +564,91 @@ func render_shop_power_ups() -> void:
 
 func render_joker_shop() -> void:
 	for c in joker_shop_row.get_children(): c.queue_free()
-	var jid = run_state.get("joker", "")
+	var rnd       = run_state.get("round", 1)
+	var joker_ids = run_state.get("jokers", [])
+	var is_joker_round = (rnd == 3 or rnd == 6)
 
-	if not jid.is_empty():
-		joker_hint_label.text = "Active"
-		var jd  = Jokers.JOKERS[jid]
-		var wrap = VBoxContainer.new()
-		wrap.add_theme_constant_override("separation", 6)
-		joker_shop_row.add_child(wrap)
-		var jp = _panel(wrap, Color(0.18, 0.14, 0.28), 10)
-		var jc = VBoxContainer.new()
-		jc.add_theme_constant_override("separation", 4)
-		jp.add_child(jc)
-		var nl = _lbl(jc, jd["name"], C_ACCENT)
-		nl.add_theme_font_size_override("font_size", 14)
-		_lbl(jc, jd["description"], C_DIM).add_theme_font_size_override("font_size", 11)
+	if not is_joker_round:
+		joker_section.hide()
 		return
 
-	joker_hint_label.text = "One Joker per run"
-	var pool    = Jokers.JOKER_POOL.duplicate()
-	var offered = []
-	for _i in range(mini(3, pool.size())):
-		var idx = randi() % pool.size()
-		offered.append(pool[idx])
-		pool.remove_at(idx)
+	joker_section.show()
 
-	for offer_jid in offered:
+	var max_j = RunEngine.MAX_JOKERS
+	if joker_ids.size() >= max_j:
+		joker_next_label.text = "Jokers full (" + str(max_j) + "/" + str(max_j) + ")"
+	else:
+		joker_next_label.text = str(joker_ids.size()) + " / " + str(max_j) + " jokers"
+
+	# Show owned jokers
+	for jid in joker_ids:
+		var jd   = Jokers.JOKERS[jid]
+		var wrap = VBoxContainer.new()
+		wrap.add_theme_constant_override("separation", 6)
+		wrap.custom_minimum_size.x = 160
+		joker_shop_row.add_child(wrap)
+		var jp = _joker_card_panel(wrap, jd, true)
+		jp.set_meta("is_owned", true)
+
+	if joker_ids.size() >= max_j:
+		return
+
+	# Offered jokers from shop
+	for offer_jid in current_shop.get("joker_offers", []):
 		var jd  = Jokers.JOKERS[offer_jid]
 		var can = RunEngine.can_buy_joker(run_state, offer_jid)
 		var wrap = VBoxContainer.new()
 		wrap.add_theme_constant_override("separation", 6)
+		wrap.custom_minimum_size.x = 160
 		joker_shop_row.add_child(wrap)
-		var jp = _panel(wrap, Color(0.14, 0.10, 0.22), 10)
-		var jc = VBoxContainer.new()
-		jc.add_theme_constant_override("separation", 4)
-		jp.add_child(jc)
-		var nl = _lbl(jc, jd["name"], C_ACCENT)
-		nl.add_theme_font_size_override("font_size", 13)
-		_lbl(jc, jd["description"], C_DIM).add_theme_font_size_override("font_size", 10)
-		var jb = _btn(wrap, str(jd["cost"]) + "g  Buy",
-			Color(0.35, 0.18, 0.50) if can else Color(0.15, 0.10, 0.20))
-		jb.disabled = not can
+		_joker_card_panel(wrap, jd, false)
+		var bb = _cost_btn(wrap, jd["cost"], "Buy Joker",
+			Color(0.30, 0.15, 0.50) if can else Color(0.12, 0.08, 0.18))
+		bb.disabled = not can
 		var jid_ref = offer_jid
-		jb.pressed.connect(func():
+		bb.pressed.connect(func():
 			run_state = RunEngine.buy_joker(run_state, jid_ref)
 			_update_status()
 			render_joker_shop()
-			render_pile_cards()
 		)
+
+func _joker_card_panel(parent: Control, jd: Dictionary, owned: bool) -> PanelContainer:
+	var rar = jd.get("rarity", "common")
+	var rc  = rarity_color(rar)
+	var jp  = PanelContainer.new()
+	jp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var jsb = StyleBoxFlat.new()
+	jsb.bg_color = Color(0.12, 0.08, 0.22) if not owned else Color(0.16, 0.10, 0.28)
+	jsb.set_corner_radius_all(8)
+	jsb.border_width_left   = 2
+	jsb.border_width_right  = 2
+	jsb.border_width_top    = 2
+	jsb.border_width_bottom = 2
+	jsb.border_color = rc
+	jsb.shadow_color  = Color(0, 0, 0, 0.4)
+	jsb.shadow_size   = 4
+	jsb.set_content_margin_all(10)
+	jp.add_theme_stylebox_override("panel", jsb)
+	parent.add_child(jp)
+
+	var jc = VBoxContainer.new()
+	jc.add_theme_constant_override("separation", 4)
+	jp.add_child(jc)
+
+	var rl = _lbl(jc, (rar + ("  ★ OWNED" if owned else "")).to_upper(), rc)
+	rl.add_theme_font_size_override("font_size", 9)
+	rl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+	var nl = _lbl(jc, jd["name"], C_JOKER if not owned else C_ACCENT)
+	nl.add_theme_font_size_override("font_size", 14)
+	nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+	var dl = _lbl(jc, jd["description"], C_DIM)
+	dl.add_theme_font_size_override("font_size", 10)
+	dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+	return jp
 
 func render_pile_cards() -> void:
 	for c in pile_cards_row.get_children(): c.queue_free()
@@ -563,7 +657,7 @@ func render_pile_cards() -> void:
 
 	var cards = run_state["player_pile"]["cards"]
 	var cap   = RunEngine.effective_pile_cap(run_state)
-	pile_count_label.text = str(cards.size()) + " / " + str(cap)
+	pile_count_label.text = "  " + str(cards.size()) + " / " + str(cap)
 
 	var stats = Selection.pile_stats(run_state["player_pile"])
 	pile_stats_label.text = "avg " + str(stats["avg_value"]) + "  •  exp " + str(stats["expected_value"])
@@ -577,11 +671,12 @@ func render_pile_cards() -> void:
 		banner_row.add_theme_constant_override("separation", 12)
 		selected_card_panel.add_child(banner_row)
 		var abl_col = ability_color(pending_power_up_id)
-		var bl = _lbl(banner_row,
-			"Select a card to apply  " + Abilities.ABILITIES[pending_power_up_id]["label"], abl_col)
-		bl.add_theme_font_size_override("font_size", 13)
+		if Abilities.ABILITIES.has(pending_power_up_id):
+			var bl = _lbl(banner_row,
+				"Select a card to apply  " + Abilities.ABILITIES[pending_power_up_id]["label"], abl_col)
+			bl.add_theme_font_size_override("font_size", 13)
 		_spacer(banner_row)
-		var cancel = _btn(banner_row, "Cancel", Color(0.22, 0.12, 0.12))
+		var cancel = _btn(banner_row, "Cancel", Color(0.20, 0.10, 0.10))
 		cancel.pressed.connect(func():
 			pending_power_up_id = ""
 			render_pile_cards()
@@ -590,8 +685,8 @@ func render_pile_cards() -> void:
 	for i in range(cards.size()):
 		var card   = cards[i]
 		var is_sel = (i == selected_pile_idx) and pending_power_up_id.is_empty()
-		var glow   = not pending_power_up_id.is_empty()  # all cards glow in power-up mode
-		var cv     = _make_card(pile_cards_row, card, 80, 110, is_sel or glow, probs[i])
+		var glow   = not pending_power_up_id.is_empty()
+		var cv     = _make_card(pile_cards_row, card, 82, 120, is_sel or glow, probs[i])
 		cv.mouse_filter = Control.MOUSE_FILTER_STOP
 		var idx = i
 		cv.gui_input.connect(func(ev):
@@ -618,19 +713,28 @@ func _render_selected_panel(card: Dictionary, prob: int) -> void:
 	row.add_theme_constant_override("separation", 20)
 	selected_card_panel.add_child(row)
 
-	# big card preview
 	_make_card(row, card, 90, 130)
 
-	# info + actions
 	var info = VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.add_theme_constant_override("separation", 8)
+	info.add_theme_constant_override("separation", 6)
 	row.add_child(info)
 
-	var abl = card.get("ability", "")
-	if not abl.is_empty() and Abilities.ABILITIES.has(abl):
-		var desc = _lbl(info, Abilities.ABILITIES[abl]["description"], ability_color(abl))
-		desc.add_theme_font_size_override("font_size", 13)
+	var abls = card.get("abilities", [])
+	if abls.is_empty():
+		_lbl(info, "No abilities", C_DIM).add_theme_font_size_override("font_size", 12)
+	else:
+		for abl in abls:
+			if Abilities.ABILITIES.has(abl):
+				var ab_data = Abilities.ABILITIES[abl]
+				var row2 = HBoxContainer.new()
+				row2.add_theme_constant_override("separation", 6)
+				info.add_child(row2)
+				var dot = _lbl(row2, "●", ability_color(abl))
+				dot.add_theme_font_size_override("font_size", 10)
+				var desc = _lbl(row2, ab_data["label"] + ": " + ab_data["description"], ability_color(abl))
+				desc.add_theme_font_size_override("font_size", 12)
+
 	var wt = card.get("weight", 0)
 	if wt != 0:
 		_lbl(info, ("+" if wt > 0 else "") + str(wt) + " flip weight", C_DIM).add_theme_font_size_override("font_size", 11)
@@ -643,8 +747,8 @@ func _render_selected_panel(card: Dictionary, prob: int) -> void:
 	info.add_child(act)
 
 	var can_up = RunEngine.can_upgrade(run_state)
-	var up_btn = _btn(act, "Upgrade  +" + str(RunEngine.UPGRADE_COST) + "m",
-		Color(0.18, 0.36, 0.58) if can_up else Color(0.12, 0.14, 0.18))
+	var up_btn = _btn(act, "Upgrade  " + str(RunEngine.UPGRADE_COST) + "g",
+		Color(0.16, 0.34, 0.56) if can_up else Color(0.10, 0.12, 0.18))
 	up_btn.disabled = not can_up
 	var cid = card["id"]
 	up_btn.pressed.connect(func():
@@ -655,23 +759,23 @@ func _render_selected_panel(card: Dictionary, prob: int) -> void:
 
 	var can_sell = RunEngine.can_sell(run_state, card["id"])
 	var sell_btn = _btn(act, "Sell  -" + str(RunEngine.SELL_COST) + "g",
-		Color(0.45, 0.14, 0.14) if can_sell else Color(0.18, 0.12, 0.12))
+		Color(0.42, 0.12, 0.12) if can_sell else Color(0.16, 0.10, 0.10))
 	sell_btn.disabled = not can_sell
 	sell_btn.pressed.connect(func():
 		run_state = RunEngine.sell_card(run_state, cid)
 		selected_pile_idx = -1
 		_update_status()
 		render_pile_cards()
-		render_shop_cards()
+		render_shop_packs()
 	)
 
-	var close_btn = _btn(act, "✕", Color(0.20, 0.20, 0.28))
+	var close_btn = _btn(act, "✕", Color(0.18, 0.18, 0.26))
 	close_btn.pressed.connect(func():
 		selected_pile_idx = -1
 		render_pile_cards()
 	)
 
-# ── battle phase ──────────────────────────────────────────────────────────────
+# ── battle phase ───────────────────────────────────────────────────────────────
 func show_battle_phase() -> void:
 	shop_section.hide()
 	battle_section.show()
@@ -681,7 +785,7 @@ func run_battle() -> void:
 	if battle_active: return
 	battle_active = true
 
-	for c in log_list.get_children(): c.queue_free()
+	for c in log_list.get_children():    c.queue_free()
 	for c in left_staging.get_children():  c.queue_free()
 	for c in right_staging.get_children(): c.queue_free()
 	for c in flip_display.get_children():  c.queue_free()
@@ -694,28 +798,28 @@ func run_battle() -> void:
 
 	var left_pile  = run_state["player_pile"]
 	var right_pile = Cards.make_random_pile("ai")
-	var jid        = run_state.get("joker", "")
+	var joker_ids  = run_state.get("jokers", [])
 
 	_log("You:  [" + ", ".join(left_pile["cards"].map(func(c): return str(c["value"]))) + "]")
 	_log("AI:   [" + ", ".join(right_pile["cards"].map(func(c): return str(c["value"]))) + "]")
 
-	var result      = BattleEngine.simulate_battle(left_pile, right_pile, jid)
+	var result      = BattleEngine.simulate_battle(left_pile, right_pile, joker_ids)
 	var left_score  = 0
 	var right_score = 0
+
+	# ── The Hush ──────────────────────────────────────────────────────────────
+	await _do_hush(result["left_flipped"].size(), result["right_flipped"].size())
 
 	for i in range(result["flips"].size()):
 		var flip = result["flips"][i]
 
-		arena_status_label.text = "Flip " + str(i + 1) + " of " + str(Selection.FLIP_COUNT)
+		arena_status_label.text = "Flip " + str(i + 1) + " of " + str(result["flips"].size())
 		flip_btn.text    = "Flip Card"
 		flip_btn.disabled = false
 		await flip_continue_pressed
 		flip_btn.disabled = true
 
-		_show_face_down()
-		await get_tree().create_timer(0.36).timeout
-		_reveal_pair(flip)
-		await get_tree().create_timer(0.22).timeout
+		await _animate_flip(flip)
 
 		if flip["winner"] == "left":  left_score  += 1
 		if flip["winner"] == "right": right_score += 1
@@ -734,26 +838,34 @@ func run_battle() -> void:
 		for ev in flip["events"]:
 			if ev.get("trigger") and ev.get("ability"):
 				var side = "You" if ev["side"] == "left" else "AI"
-				_log("  " + side + " " + ev["ability"] + " [" + ev["trigger"] + "]: " +
-					("+" if ev["delta"] > 0 else "") + str(ev["delta"]) + (" (next)" if ev.get("next") else ""))
+				var delta_str = ("+" if ev.get("delta", 0) > 0 else "") + str(ev.get("delta", 0))
+				var suffix = " (next)" if ev.get("next") else (" [" + ev.get("currency", "") + "]" if ev.get("currency") else "")
+				_log("  " + side + " " + ev["ability"] + " [" + ev["trigger"] + "]: " + delta_str + suffix)
 
+	# ── Battle result flair ───────────────────────────────────────────────────
 	var win_text = ""
 	if result["winner"] == "tie":
-		win_text = "Tied " + str(left_score) + "–" + str(right_score)
+		win_text = "TIED  " + str(left_score) + "–" + str(right_score)
 	else:
-		win_text = ("You win" if result["winner"] == "left" else "AI wins") + \
-			"  " + str(maxi(left_score, right_score)) + "–" + str(mini(left_score, right_score))
+		var who   = "YOU WIN" if result["winner"] == "left" else "AI WINS"
+		var sc    = str(maxi(left_score, right_score)) + "–" + str(mini(left_score, right_score))
+		var flair = ""
+		if result["margin"] == result["flips"].size(): flair = "  SWEEP!"
+		elif result["margin"] == 1:                    flair = "  Nail-biter!"
+		win_text = who + "  " + sc + flair
 	result_label.text = win_text
+	result_label.add_theme_color_override("font_color",
+		C_WIN if result["winner"] == "left" else (C_LOSE if result["winner"] == "right" else C_TIE))
 	_log("=== " + win_text + " ===")
 
+	# ── Reveal Window ─────────────────────────────────────────────────────────
+	await _show_reveal_window(result["left_unflipped"], result["right_unflipped"])
+
 	var bw = "player" if result["winner"] == "left" else ("ai" if result["winner"] == "right" else "tie")
-	var prev_mana = run_state["mana"]
 	run_state = RunEngine.apply_battle_result(run_state, {
 		"winner": bw, "margin": result["margin"],
-		"gold_bonus": result["left_gold_bonus"],
-		"joker_mana_bonus": result["joker_mana_bonus"]
+		"gold_bonus": result["left_gold_bonus"]
 	})
-	_log("+" + str(run_state["mana"] - prev_mana) + "m earned")
 	_update_status()
 	battle_active = false
 
@@ -769,25 +881,212 @@ func run_battle() -> void:
 		await flip_continue_pressed
 		show_shop_phase()
 
-# ── battle helpers ────────────────────────────────────────────────────────────
+# ── The Hush: pre-battle dramatic pause ───────────────────────────────────────
+func _do_hush(n_left: int, n_right: int) -> void:
+	for c in flip_display.get_children(): c.queue_free()
+
+	arena_status_label.text = "— The Hush —"
+	arena_status_label.add_theme_color_override("font_color", C_ACCENT)
+
+	var hrow = HBoxContainer.new()
+	hrow.alignment = BoxContainer.ALIGNMENT_CENTER
+	hrow.add_theme_constant_override("separation", 24)
+	flip_display.add_child(hrow)
+
+	var lside = HBoxContainer.new(); lside.add_theme_constant_override("separation", 5)
+	hrow.add_child(lside)
+	var lbl_vs = _lbl(hrow, "VS", C_DIM); lbl_vs.add_theme_font_size_override("font_size", 18)
+	var rside = HBoxContainer.new(); rside.add_theme_constant_override("separation", 5)
+	hrow.add_child(rside)
+
+	for _i in range(n_left):  _hush_card(lside)
+	for _i in range(n_right): _hush_card(rside)
+
+	# Stagger fade-in
+	var all_cards = lside.get_children() + rside.get_children()
+	for card in all_cards: card.modulate = Color(1, 1, 1, 0)
+	var tw_in = create_tween()
+	tw_in.set_parallel(true)
+	for i in range(all_cards.size()):
+		tw_in.tween_property(all_cards[i], "modulate:a", 1.0, 0.15).set_delay(i * 0.07)
+	await tw_in.finished
+
+	# Pulse status label during the hush
+	var pulse = create_tween()
+	pulse.set_loops(2)
+	pulse.tween_property(arena_status_label, "modulate:a", 0.4, 0.35)
+	pulse.tween_property(arena_status_label, "modulate:a", 1.0, 0.35)
+	await get_tree().create_timer(1.5).timeout
+	pulse.kill()
+	arena_status_label.modulate.a = 1.0
+
+	# Fade out
+	var tw_out = create_tween()
+	tw_out.tween_property(hrow, "modulate:a", 0.0, 0.25)
+	await tw_out.finished
+	for c in flip_display.get_children(): c.queue_free()
+	arena_status_label.text = ""
+	arena_status_label.add_theme_color_override("font_color", C_DIM)
+
+func _hush_card(parent: Control) -> PanelContainer:
+	var cp = PanelContainer.new()
+	cp.custom_minimum_size = Vector2(46, 62)
+	var sb = StyleBoxFlat.new()
+	sb.bg_color = Color(0.10, 0.08, 0.20)
+	sb.set_corner_radius_all(6)
+	sb.border_width_left   = 2; sb.border_width_right  = 2
+	sb.border_width_top    = 2; sb.border_width_bottom = 2
+	sb.border_color = Color(0.32, 0.22, 0.58)
+	sb.shadow_color = Color(0, 0, 0, 0.5); sb.shadow_size = 4
+	sb.set_content_margin_all(4)
+	cp.add_theme_stylebox_override("panel", sb)
+	parent.add_child(cp)
+	var l = Label.new()
+	l.text = "?"
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+	l.add_theme_font_size_override("font_size", 18)
+	l.add_theme_color_override("font_color", Color(0.30, 0.22, 0.52))
+	l.set_anchors_preset(Control.PRESET_FULL_RECT)
+	cp.add_child(l)
+	return cp
+
+# ── Reveal Window: show cards that didn't flip ────────────────────────────────
+func _show_reveal_window(left_unflipped: Array, right_unflipped: Array) -> void:
+	if left_unflipped.is_empty() and right_unflipped.is_empty(): return
+	for c in flip_display.get_children(): c.queue_free()
+
+	arena_status_label.text = "Cards that stayed home:"
+	arena_status_label.add_theme_color_override("font_color", C_DIM)
+
+	var col = VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_theme_constant_override("separation", 8)
+	col.modulate = Color(1, 1, 1, 0)
+	flip_display.add_child(col)
+
+	if not left_unflipped.is_empty():
+		var row = HBoxContainer.new()
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_theme_constant_override("separation", 6)
+		col.add_child(row)
+		_lbl(row, "You:", C_DIM).add_theme_font_size_override("font_size", 10)
+		for card in left_unflipped:
+			_make_card(row, card, 50, 68)
+
+	if not right_unflipped.is_empty():
+		var row = HBoxContainer.new()
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_theme_constant_override("separation", 6)
+		col.add_child(row)
+		_lbl(row, "AI:", C_DIM).add_theme_font_size_override("font_size", 10)
+		for card in right_unflipped:
+			_make_card(row, card, 50, 68)
+
+	var tw_in = create_tween()
+	tw_in.tween_property(col, "modulate:a", 1.0, 0.45)
+	await tw_in.finished
+	await get_tree().create_timer(2.2).timeout
+	var tw_out = create_tween()
+	tw_out.tween_property(col, "modulate:a", 0.0, 0.3)
+	await tw_out.finished
+	for c in flip_display.get_children(): c.queue_free()
+	arena_status_label.text = ""
+
+# ── battle animations ──────────────────────────────────────────────────────────
+func _animate_flip(flip: Dictionary) -> void:
+	# Show face-down cards
+	_show_face_down()
+
+	# Set pivot to card center for scale pulse
+	var fd_nodes = flip_display.get_children()
+	for c in fd_nodes:
+		if c is PanelContainer:
+			c.pivot_offset = Vector2(50, 70)
+
+	# Breathe in — suspense pulse
+	var tw_in = create_tween()
+	tw_in.set_parallel(true)
+	for c in fd_nodes:
+		if c is PanelContainer:
+			tw_in.tween_property(c, "scale", Vector2(1.07, 1.07), 0.30).set_ease(Tween.EASE_OUT)
+	await tw_in.finished
+
+	# Breathe out
+	var tw_out = create_tween()
+	tw_out.set_parallel(true)
+	for c in fd_nodes:
+		if c is PanelContainer:
+			tw_out.tween_property(c, "scale", Vector2(1.0, 1.0), 0.22).set_ease(Tween.EASE_IN)
+	await tw_out.finished
+
+	# Brief dramatic pause
+	await get_tree().create_timer(0.18).timeout
+
+	# Fold (scale X → 0)
+	var children = flip_display.get_children()
+	if children.size() >= 3:
+		var lv = children[0]
+		var rv = children[2]
+		var tw1 = create_tween()
+		tw1.set_parallel(true)
+		tw1.tween_property(lv, "scale:x", 0.0, 0.22).set_ease(Tween.EASE_IN)
+		tw1.tween_property(rv, "scale:x", 0.0, 0.22).set_ease(Tween.EASE_IN).set_delay(0.08)
+		await tw1.finished
+
+	# Replace with revealed cards at scale 0, then unfold
+	for c in flip_display.get_children(): c.queue_free()
+	var lc = C_WIN if flip["winner"] == "left" else (C_TIE if flip["winner"] == "tie" else C_LOSE)
+	var rc = C_WIN if flip["winner"] == "right" else (C_TIE if flip["winner"] == "tie" else C_LOSE)
+
+	var lv2 = _make_card(flip_display, flip["left"],  100, 140)
+	lv2.scale = Vector2(0.0, 1.0)
+	lv2.pivot_offset = Vector2(50, 70)
+	_lbl(flip_display, "vs", C_DIM).add_theme_font_size_override("font_size", 18)
+	var rv2 = _make_card(flip_display, flip["right"], 100, 140)
+	rv2.scale = Vector2(0.0, 1.0)
+	rv2.pivot_offset = Vector2(50, 70)
+
+	var tw2 = create_tween()
+	tw2.set_parallel(true)
+	tw2.tween_property(lv2, "scale:x", 1.0, 0.25).set_ease(Tween.EASE_OUT)
+	tw2.tween_property(rv2, "scale:x", 1.0, 0.25).set_ease(Tween.EASE_OUT).set_delay(0.08)
+	await tw2.finished
+
+	# Flash result color on borders
+	for pair in [[lv2, lc], [rv2, rc]]:
+		var pn  = pair[0]
+		var col = pair[1]
+		var bsb = pn.get_theme_stylebox("panel").duplicate()
+		bsb.border_color        = col
+		bsb.border_width_left   = 3
+		bsb.border_width_right  = 3
+		bsb.border_width_top    = 3
+		bsb.border_width_bottom = 3
+		pn.add_theme_stylebox_override("panel", bsb)
+
+	# Linger on the result
+	await get_tree().create_timer(0.6).timeout
+
 func _show_face_down() -> void:
 	for c in flip_display.get_children(): c.queue_free()
-	var lc = _face_down_card(flip_display)
-	lc.custom_minimum_size = Vector2(100, 140)
+	_face_down_card(flip_display)
 	_lbl(flip_display, "vs", C_DIM).add_theme_font_size_override("font_size", 18)
-	var rc = _face_down_card(flip_display)
-	rc.custom_minimum_size = Vector2(100, 140)
+	_face_down_card(flip_display)
 
 func _face_down_card(parent: Control) -> PanelContainer:
 	var cp = PanelContainer.new()
 	cp.custom_minimum_size = Vector2(100, 140)
 	var sb = StyleBoxFlat.new()
-	sb.bg_color = Color(0.12, 0.12, 0.20)
+	sb.bg_color = Color(0.10, 0.10, 0.18)
 	sb.set_corner_radius_all(10)
-	sb.border_width_left = sb.border_width_right = sb.border_width_top = sb.border_width_bottom = 2
-	sb.border_color = Color(0.25, 0.25, 0.40)
+	sb.border_width_left   = 2
+	sb.border_width_right  = 2
+	sb.border_width_top    = 2
+	sb.border_width_bottom = 2
+	sb.border_color = Color(0.22, 0.22, 0.38)
 	sb.shadow_color = Color(0, 0, 0, 0.5)
-	sb.shadow_size = 6
+	sb.shadow_size  = 6
 	sb.set_content_margin_all(8)
 	cp.add_theme_stylebox_override("panel", sb)
 	parent.add_child(cp)
@@ -795,33 +1094,11 @@ func _face_down_card(parent: Control) -> PanelContainer:
 	l.text = "?"
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
-	l.add_theme_font_size_override("font_size", 36)
-	l.add_theme_color_override("font_color", Color(0.3, 0.3, 0.5))
+	l.add_theme_font_size_override("font_size", 38)
+	l.add_theme_color_override("font_color", Color(0.28, 0.28, 0.48))
 	l.set_anchors_preset(Control.PRESET_FULL_RECT)
 	cp.add_child(l)
 	return cp
-
-func _reveal_pair(flip: Dictionary) -> void:
-	for c in flip_display.get_children(): c.queue_free()
-	var lc = flip["winner"] == "left" and C_WIN or (flip["winner"] == "right" and C_LOSE or C_TIE)
-	var rc = flip["winner"] == "right" and C_WIN or (flip["winner"] == "left"  and C_LOSE or C_TIE)
-	var lcard = flip["left"].duplicate()
-	lcard["value"] = flip["left_effective"]
-	var rcard = flip["right"].duplicate()
-	rcard["value"] = flip["right_effective"]
-	var lv = _make_card(flip_display, flip["left"], 100, 140)
-	lv.custom_minimum_size = Vector2(100, 140)
-	_lbl(flip_display, "vs", C_DIM).add_theme_font_size_override("font_size", 18)
-	var rv = _make_card(flip_display, flip["right"], 100, 140)
-	rv.custom_minimum_size = Vector2(100, 140)
-	# Tint border by outcome
-	for pair in [[lv, lc], [rv, rc]]:
-		var panel_node = pair[0]
-		var col        = pair[1]
-		var sb = panel_node.get_theme_stylebox("panel").duplicate()
-		sb.border_color = col
-		sb.border_width_left = sb.border_width_right = sb.border_width_top = sb.border_width_bottom = 3
-		panel_node.add_theme_stylebox_override("panel", sb)
 
 func _add_history(row: HBoxContainer, txt: String, outcome: String) -> void:
 	var col = C_WIN if outcome == "win" else (C_LOSE if outcome == "lose" else C_TIE)
@@ -829,8 +1106,11 @@ func _add_history(row: HBoxContainer, txt: String, outcome: String) -> void:
 	cp.custom_minimum_size = Vector2(36, 36)
 	var sb = StyleBoxFlat.new()
 	sb.bg_color = col.darkened(0.5)
-	sb.border_color = col
-	sb.border_width_left = sb.border_width_right = sb.border_width_top = sb.border_width_bottom = 2
+	sb.border_color        = col
+	sb.border_width_left   = 2
+	sb.border_width_right  = 2
+	sb.border_width_top    = 2
+	sb.border_width_bottom = 2
 	sb.set_corner_radius_all(4)
 	sb.set_content_margin_all(4)
 	cp.add_theme_stylebox_override("panel", sb)
@@ -852,7 +1132,7 @@ func _log(msg: String) -> void:
 func _card_str(card: Dictionary, eff: int) -> String:
 	return str(card["value"]) + "→" + str(eff) if eff != card["value"] else str(card["value"])
 
-# ── ui factory ────────────────────────────────────────────────────────────────
+# ── ui factory ─────────────────────────────────────────────────────────────────
 func _panel(parent: Control, color: Color = C_PANEL, pad: int = 8) -> PanelContainer:
 	var pc = PanelContainer.new()
 	var sb = StyleBoxFlat.new()
@@ -870,11 +1150,11 @@ func _btn(parent: Control, text: String, color: Color = C_BTN) -> Button:
 	var sb = StyleBoxFlat.new()
 	sb.bg_color = color
 	sb.set_corner_radius_all(5)
-	sb.set_content_margin_all(7)
+	sb.set_content_margin_all(8)
 	b.add_theme_stylebox_override("normal", sb)
-	var sb_hov = sb.duplicate(); sb_hov.bg_color = color.lightened(0.15)
+	var sb_hov = sb.duplicate(); sb_hov.bg_color = color.lightened(0.18)
 	b.add_theme_stylebox_override("hover", sb_hov)
-	var sb_dis = sb.duplicate(); sb_dis.bg_color = color.darkened(0.5)
+	var sb_dis = sb.duplicate(); sb_dis.bg_color = color.darkened(0.55)
 	b.add_theme_stylebox_override("disabled", sb_dis)
 	b.add_theme_color_override("font_color",          C_TEXT)
 	b.add_theme_color_override("font_hover_color",    C_TEXT)
@@ -882,6 +1162,10 @@ func _btn(parent: Control, text: String, color: Color = C_BTN) -> Button:
 	b.add_theme_font_size_override("font_size", 13)
 	parent.add_child(b)
 	return b
+
+# Button with a leading gold-colored cost badge
+func _cost_btn(parent: Control, cost: int, label: String, color: Color) -> Button:
+	return _btn(parent, str(cost) + "g  " + label, color)
 
 func _lbl(parent: Control, text: String, color: Color = C_TEXT) -> Label:
 	var l = Label.new()
@@ -896,25 +1180,111 @@ func _spacer(parent: Control) -> Control:
 	parent.add_child(s)
 	return s
 
-func ability_text(abl: String) -> String:
-	if abl.is_empty(): return ""
-	return Abilities.ABILITIES[abl]["label"] if Abilities.ABILITIES.has(abl) else abl
+# ── perk selection ─────────────────────────────────────────────────────────────
+func _show_perk_selection() -> void:
+	if perk_overlay:
+		perk_overlay.queue_free()
+	perk_overlay = Control.new()
+	perk_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	perk_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(perk_overlay)
 
-# ── event handlers ────────────────────────────────────────────────────────────
+	var bg = ColorRect.new()
+	bg.color = Color(0.0, 0.0, 0.0, 0.82)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	perk_overlay.add_child(bg)
+
+	var center = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	perk_overlay.add_child(center)
+
+	var box = VBoxContainer.new()
+	box.custom_minimum_size = Vector2(740, 0)
+	box.add_theme_constant_override("separation", 20)
+	center.add_child(box)
+
+	var title = Label.new()
+	title.text = "CHOOSE YOUR PERK"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", C_ACCENT)
+	box.add_child(title)
+
+	var sub = Label.new()
+	sub.text = "A passive bonus that lasts the entire run  —  choose wisely"
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.add_theme_font_size_override("font_size", 12)
+	sub.add_theme_color_override("font_color", C_DIM)
+	box.add_child(sub)
+
+	var row = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_child(row)
+
+	for perk_id in RunEngine.PERKS.keys():
+		var perk = RunEngine.PERKS[perk_id]
+		var wp = VBoxContainer.new()
+		wp.custom_minimum_size = Vector2(162, 0)
+		wp.add_theme_constant_override("separation", 10)
+		row.add_child(wp)
+
+		var pp = _panel(wp, Color(0.10, 0.12, 0.22), 18)
+		var sb = pp.get_theme_stylebox("panel").duplicate()
+		sb.border_width_left   = 2
+		sb.border_width_right  = 2
+		sb.border_width_top    = 2
+		sb.border_width_bottom = 2
+		sb.border_color = C_ACCENT.darkened(0.35)
+		sb.shadow_color = Color(0, 0, 0, 0.5)
+		sb.shadow_size  = 8
+		pp.add_theme_stylebox_override("panel", sb)
+
+		var pc = VBoxContainer.new()
+		pc.add_theme_constant_override("separation", 10)
+		pc.alignment = BoxContainer.ALIGNMENT_CENTER
+		pp.add_child(pc)
+
+		var nl = _lbl(pc, perk["name"], C_ACCENT)
+		nl.add_theme_font_size_override("font_size", 17)
+		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+		var dl = _lbl(pc, perk["description"], C_TEXT)
+		dl.add_theme_font_size_override("font_size", 12)
+		dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+		var btn = _btn(wp, "Choose", Color(0.18, 0.28, 0.50))
+		btn.custom_minimum_size.y = 38
+		var pid = perk_id
+		btn.pressed.connect(func(): _on_perk_selected(pid))
+
+func _on_perk_selected(perk_id: String) -> void:
+	run_state = RunEngine.apply_starting_perk(run_state, perk_id)
+	if perk_overlay:
+		perk_overlay.queue_free()
+		perk_overlay = null
+	status_bar.show()
+	show_shop_phase()
+
+# ── event handlers ─────────────────────────────────────────────────────────────
 func _on_new_run() -> void:
 	run_state           = RunEngine.make_run()
 	current_shop        = {}
 	selected_pile_idx   = -1
 	pending_power_up_id = ""
-	status_bar.show()
-	show_shop_phase()
+	shop_section.hide()
+	battle_section.hide()
+	status_bar.hide()
+	_show_perk_selection()
 
 func _on_reroll() -> void:
-	if run_state.is_empty() or run_state["gold"] < ShopEngine.REROLL_COST: return
+	var cost = 0 if run_state.get("perk") == "tactician" else ShopEngine.REROLL_COST
+	if run_state.is_empty() or run_state["gold"] < cost: return
 	run_state = run_state.duplicate(true)
-	run_state["gold"] -= ShopEngine.REROLL_COST
+	run_state["gold"] -= cost
 	_update_status()
-	current_shop["power_ups"] = ShopEngine.generate_power_ups(3)
+	current_shop["power_ups"] = ShopEngine.generate_power_ups(3, run_state["round"])
 	render_shop_power_ups()
 
 func _on_go_battle() -> void:

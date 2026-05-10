@@ -5,7 +5,11 @@ const BASE_WEIGHT = 100
 const MIN_WEIGHT  = 10
 
 func effective_weight(card: Dictionary) -> int:
-	return max(MIN_WEIGHT, BASE_WEIGHT + card.get("weight", 0))
+	var base = BASE_WEIGHT + card.get("weight", 0)
+	var abls = card.get("abilities", [])
+	if abls.has("spotlight"):  base += 40
+	if abls.has("stage_hog"):  base += 90
+	return max(MIN_WEIGHT, base)
 
 func weighted_sample(pool: Array, count: int) -> Array:
 	var remaining = pool.duplicate()
@@ -36,13 +40,16 @@ func shuffle_array(arr: Array) -> Array:
 		a[j] = tmp
 	return a
 
+func _has_anchor(card: Dictionary) -> bool:
+	return card.get("abilities", []).has("anchor")
+
 func select_flipped(pile: Dictionary) -> Array:
 	var cards: Array = pile["cards"]
 	if cards.size() <= FLIP_COUNT:
 		return shuffle_array(cards)
 
-	var anchor_cards = cards.filter(func(c): return c.get("ability") == "anchor")
-	var normal_cards  = cards.filter(func(c): return c.get("ability") != "anchor")
+	var anchor_cards = cards.filter(func(c): return _has_anchor(c))
+	var normal_cards  = cards.filter(func(c): return not _has_anchor(c))
 
 	var anchored   = anchor_cards.slice(0, FLIP_COUNT)
 	var slots_left = FLIP_COUNT - anchored.size()
@@ -65,10 +72,10 @@ func flip_probabilities(pile: Dictionary) -> Array:
 	if cards.size() <= FLIP_COUNT:
 		return cards.map(func(_c): return 100)
 
-	var anchor_count = cards.filter(func(c): return c.get("ability") == "anchor").size()
+	var anchor_count = cards.filter(func(c): return _has_anchor(c)).size()
 	var anchor_slots = min(anchor_count, FLIP_COUNT)
 	var normal_slots = FLIP_COUNT - anchor_slots
-	var normal_cards = cards.filter(func(c): return c.get("ability") != "anchor")
+	var normal_cards = cards.filter(func(c): return not _has_anchor(c))
 
 	var total_weight = 0
 	for card in normal_cards:
@@ -76,7 +83,7 @@ func flip_probabilities(pile: Dictionary) -> Array:
 
 	var probs = []
 	for card in cards:
-		if card.get("ability") == "anchor":
+		if _has_anchor(card):
 			probs.append(100)
 		else:
 			var w    = effective_weight(card)
@@ -105,9 +112,9 @@ func pile_stats(pile: Dictionary) -> Dictionary:
 		expected     += card["value"] * (probs[i] / 100.0)
 
 	return {
-		"avg_value":     snappedf(float(sum_val) / n, 0.1),
-		"odd_count":     odd_count,
-		"even_count":    n - odd_count,
-		"total_weight":  total_weight,
+		"avg_value":      snappedf(float(sum_val) / n, 0.1),
+		"odd_count":      odd_count,
+		"even_count":     n - odd_count,
+		"total_weight":   total_weight,
 		"expected_value": snappedf(expected, 0.1)
 	}

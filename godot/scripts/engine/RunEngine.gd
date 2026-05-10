@@ -1,15 +1,20 @@
 extends Node
 
 const STARTING_HP   = 25
-const STARTING_GOLD = 10
+const STARTING_GOLD = 7
 const CARD_COST     = 3
 const SELL_COST     = 1
 const MIN_PILE_SIZE = 10
 const MAX_PILE_SIZE = 14
-const UPGRADE_COST  = 3
-const MANA_WIN      = 2
-const MANA_LOSS     = 1
-const MANA_TIE      = 1
+const UPGRADE_COST  = 4
+const MAX_JOKERS    = 2
+
+const PERKS = {
+	"merchant":    {"id": "merchant",    "name": "Merchant",    "description": "Start each shop with +2g bonus."},
+	"veteran":     {"id": "veteran",     "name": "Veteran",     "description": "Your highest starter card has Blaze."},
+	"scholar":     {"id": "scholar",     "name": "Scholar",     "description": "Power-ups cost 1g less (min 1g)."},
+	"tactician":   {"id": "tactician",   "name": "Tactician",   "description": "Rerolling the shop is free."},
+}
 
 func make_run() -> Dictionary:
 	return {
@@ -17,15 +22,33 @@ func make_run() -> Dictionary:
 		"player_hp":           STARTING_HP,
 		"ai_hp":               STARTING_HP,
 		"gold":                STARTING_GOLD,
-		"mana":                0,
-		"joker":               "",
+		"perk":                "",
+		"jokers":              [],
 		"player_pile":         Cards.make_starter_pile("player"),
 		"phase":               "shop",
 		"sells_used_this_shop": 0
 	}
 
+func apply_starting_perk(run: Dictionary, perk_id: String) -> Dictionary:
+	var new_run = run.duplicate(true)
+	new_run["perk"] = perk_id
+	if perk_id == "veteran":
+		var cards = new_run["player_pile"]["cards"].duplicate(true)
+		var best_idx = 0
+		for i in range(1, cards.size()):
+			if cards[i]["value"] > cards[best_idx]["value"]:
+				best_idx = i
+		var nc = cards[best_idx].duplicate(true)
+		var abls = nc.get("abilities", []).duplicate()
+		if not abls.has("blaze"):
+			abls.append("blaze")
+		nc["abilities"] = abls
+		cards[best_idx] = nc
+		new_run["player_pile"]["cards"] = cards
+	return new_run
+
 func effective_pile_cap(run: Dictionary) -> int:
-	var cap = Jokers.joker_pile_cap(run.get("joker", ""))
+	var cap = Jokers.joker_pile_cap(run.get("jokers", []))
 	return cap if cap > 0 else MAX_PILE_SIZE
 
 func can_buy(run: Dictionary) -> bool:
@@ -38,11 +61,16 @@ func can_sell(run: Dictionary, card_id: String) -> bool:
 	return run["player_pile"]["cards"].any(func(c): return c["id"] == card_id)
 
 func can_upgrade(run: Dictionary) -> bool:
-	return run["mana"] >= UPGRADE_COST
+	return run["gold"] >= UPGRADE_COST
+
+func effective_power_up_cost(run: Dictionary, base_cost: int) -> int:
+	return maxi(1, base_cost - 1) if run.get("perk") == "scholar" else base_cost
 
 func can_buy_joker(run: Dictionary, joker_id: String) -> bool:
 	if not Jokers.JOKERS.has(joker_id): return false
-	return run["gold"] >= Jokers.JOKERS[joker_id]["cost"] and run.get("joker", "") == ""
+	if run.get("jokers", []).size() >= MAX_JOKERS: return false
+	if run.get("jokers", []).has(joker_id): return false
+	return run["gold"] >= Jokers.JOKERS[joker_id]["cost"]
 
 func buy_card(run: Dictionary, card: Dictionary) -> Dictionary:
 	if run["gold"] < CARD_COST: return run
@@ -65,7 +93,7 @@ func sell_card(run: Dictionary, card_id: String) -> Dictionary:
 	return new_run
 
 func upgrade_card(run: Dictionary, card_id: String) -> Dictionary:
-	if run["mana"] < UPGRADE_COST: return run
+	if run["gold"] < UPGRADE_COST: return run
 	var found = false
 	var new_cards = []
 	for c in run["player_pile"]["cards"]:
@@ -76,7 +104,7 @@ func upgrade_card(run: Dictionary, card_id: String) -> Dictionary:
 			new_cards.append(c)
 	if not found: return run
 	var new_run = run.duplicate(true)
-	new_run["mana"] -= UPGRADE_COST
+	new_run["gold"] -= UPGRADE_COST
 	new_run["player_pile"]["cards"] = new_cards
 	return new_run
 
@@ -101,7 +129,10 @@ func buy_power_up(run: Dictionary, card_id: String, ability_id: String, cost: in
 		if c["id"] == card_id:
 			found = true
 			var nc = c.duplicate(true)
-			nc["ability"] = ability_id
+			var abls = nc.get("abilities", []).duplicate()
+			if not abls.has(ability_id):
+				abls.append(ability_id)
+			nc["abilities"] = abls
 			new_cards.append(nc)
 		else:
 			new_cards.append(c)
@@ -113,30 +144,28 @@ func buy_power_up(run: Dictionary, card_id: String, ability_id: String, cost: in
 
 func buy_joker(run: Dictionary, joker_id: String) -> Dictionary:
 	if not Jokers.JOKERS.has(joker_id): return run
+	if run.get("jokers", []).size() >= MAX_JOKERS: return run
 	var cost = Jokers.JOKERS[joker_id]["cost"]
 	if run["gold"] < cost: return run
 	var new_run = run.duplicate(true)
 	new_run["gold"] -= cost
-	new_run["joker"] = joker_id
+	var new_jokers = run["jokers"].duplicate()
+	new_jokers.append(joker_id)
+	new_run["jokers"] = new_jokers
 	return new_run
 
 func apply_battle_result(run: Dictionary, result: Dictionary) -> Dictionary:
-	var damage       = mini(3, result.get("margin", 0))
+	var damage        = mini(3, result.get("margin", 0))
 	var new_player_hp = run["player_hp"]
 	var new_ai_hp     = run["ai_hp"]
 	if result["winner"] == "ai":     new_player_hp = maxi(0, run["player_hp"] - damage)
 	if result["winner"] == "player": new_ai_hp     = maxi(0, run["ai_hp"]     - damage)
 	var phase = "over" if (new_player_hp <= 0 or new_ai_hp <= 0) else "shop"
 
-	var mana_earned = MANA_TIE
-	if result["winner"] == "player": mana_earned = MANA_WIN
-	elif result["winner"] == "ai":   mana_earned = MANA_LOSS
-	mana_earned += result.get("joker_mana_bonus", 0)
-
+	var perk_gold_bonus = 2 if run.get("perk") == "merchant" else 0
 	var new_run = run.duplicate(true)
 	new_run["round"]                = run["round"] + 1
-	new_run["gold"]                 = STARTING_GOLD + result.get("gold_bonus", 0)
-	new_run["mana"]                 = run["mana"] + mana_earned
+	new_run["gold"]                 = STARTING_GOLD + result.get("gold_bonus", 0) + perk_gold_bonus
 	new_run["player_hp"]            = new_player_hp
 	new_run["ai_hp"]                = new_ai_hp
 	new_run["phase"]                = phase

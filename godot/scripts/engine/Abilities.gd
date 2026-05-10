@@ -1,36 +1,126 @@
 extends Node
 
+# cost is used by ShopEngine to price power-ups; rarity gates round availability
 const ABILITIES = {
-	"valor":    {"id": "valor",    "label": "Valor",    "description": "On Win: next +1",            "trigger": "on_win"},
-	"spite":    {"id": "spite",    "label": "Spite",    "description": "On Loss: foe next -1",        "trigger": "on_loss"},
-	"blaze":    {"id": "blaze",    "label": "Blaze",    "description": "On Reveal: +2",               "trigger": "on_reveal"},
-	"pierce":   {"id": "pierce",   "label": "Pierce",   "description": "On Tie: count as win",        "trigger": "on_tie"},
-	"echo":     {"id": "echo",     "label": "Echo",     "description": "On Reveal: +3",               "trigger": "on_reveal"},
-	"comeback": {"id": "comeback", "label": "Comeback", "description": "On Loss by 3+: +2g next shop","trigger": "on_loss"},
-	"anchor":   {"id": "anchor",   "label": "Anchor",   "description": "Passive: always flips",       "trigger": "passive"}
+	# ── Common (3g) — available round 1+ ──────────────────────────────────────
+	"valor":     {"id": "valor",     "label": "Valor",     "description": "On Win: next ally +1",   "trigger": "on_win",   "rarity": "common",   "cost": 3},
+	"spite":     {"id": "spite",     "label": "Spite",     "description": "On Loss: foe next -1",   "trigger": "on_loss",  "rarity": "common",   "cost": 3},
+	"blaze":     {"id": "blaze",     "label": "Blaze",     "description": "On Reveal: +2",          "trigger": "on_reveal","rarity": "common",   "cost": 3},
+	"martyr":    {"id": "martyr",    "label": "Martyr",    "description": "On Loss: your next +2",  "trigger": "on_loss",  "rarity": "common",   "cost": 3},
+	"spotlight": {"id": "spotlight", "label": "Spotlight", "description": "+40 flip weight",        "trigger": "passive",  "rarity": "common",   "cost": 3},
+	# ── Uncommon (4-5g) — available round 2+ ─────────────────────────────────
+	"pierce":    {"id": "pierce",    "label": "Pierce",    "description": "On Tie: count as win",        "trigger": "on_tie",   "rarity": "uncommon", "cost": 4},
+	"echo":      {"id": "echo",      "label": "Echo",      "description": "On Reveal: +3",               "trigger": "on_reveal","rarity": "uncommon", "cost": 4},
+	"comeback":  {"id": "comeback",  "label": "Comeback",  "description": "On Loss by 3+: +2g",          "trigger": "on_loss",  "rarity": "uncommon", "cost": 4},
+	"coin_press":{"id": "coin_press","label": "Coin Press","description": "On Win: +1g",                 "trigger": "on_win",   "rarity": "uncommon", "cost": 5},
+	"shield":    {"id": "shield",    "label": "Shield",    "description": "On Win: foe next -2",         "trigger": "on_win",   "rarity": "uncommon", "cost": 4},
+	"avenger":   {"id": "avenger",   "label": "Avenger",   "description": "If prev flip lost: +3",       "trigger": "on_reveal","rarity": "uncommon", "cost": 5},
+	"phoenix":   {"id": "phoenix",   "label": "Phoenix",   "description": "On Loss: +1g",                "trigger": "on_loss",  "rarity": "uncommon", "cost": 4},
+	# ── Rare (6-7g) — available round 3+ ─────────────────────────────────────
+	"anchor":    {"id": "anchor",    "label": "Anchor",    "description": "Passive: always flips",  "trigger": "passive",  "rarity": "rare",     "cost": 6},
+	"stage_hog": {"id": "stage_hog", "label": "Stage Hog","description": "+90 flip weight",        "trigger": "passive",  "rarity": "rare",     "cost": 6},
+	"eclipse":   {"id": "eclipse",   "label": "Eclipse",   "description": "On Reveal: +5",          "trigger": "on_reveal","rarity": "rare",     "cost": 7},
+	"storm":     {"id": "storm",     "label": "Storm",     "description": "On Win: foe next -3",    "trigger": "on_win",   "rarity": "rare",     "cost": 7},
+	# ── Tie-conditional (3-4g) — available round 1+ ───────────────────────────
+	"draw_power":  {"id": "draw_power",  "label": "Draw Power",  "description": "On Tie: +1g",         "trigger": "on_tie",  "rarity": "common",   "cost": 3},
+	"resilience":  {"id": "resilience",  "label": "Resilience",  "description": "On Tie: next ally +3", "trigger": "on_tie",  "rarity": "uncommon", "cost": 4},
+	# ── Win-conditional (5g) — available round 2+ ─────────────────────────────
+	"bounty":      {"id": "bounty",      "label": "Bounty",      "description": "Win by 2+: +2g",      "trigger": "on_win",  "rarity": "uncommon", "cost": 5},
 }
 
-func on_reveal_bonus(ability_id: String) -> int:
-	if ability_id == "blaze": return 2
-	if ability_id == "echo":  return 3
-	return 0
+# ── reveal events ─────────────────────────────────────────────────────────────
+# Returns list of {ability, delta} for all on-reveal abilities a card has.
+func on_reveal_events(abilities: Array) -> Array:
+	var events = []
+	for abl in abilities:
+		if abl == "blaze":   events.append({"ability": abl, "delta": 2})
+		if abl == "echo":    events.append({"ability": abl, "delta": 3})
+		if abl == "eclipse": events.append({"ability": abl, "delta": 5})
+	return events
 
-func post_flip_deltas(winner: String, left_ability: String, right_ability: String) -> Dictionary:
+func on_reveal_bonus(abilities: Array) -> int:
+	var total = 0
+	for ev in on_reveal_events(abilities):
+		total += ev["delta"]
+	return total
+
+# ── post-flip pending events ───────────────────────────────────────────────────
+# Returns events that affect the NEXT flip's effective values.
+# "side" = which side's next card is affected; "delta" = pending amount.
+func post_flip_events(winner: String, left_abls: Array, right_abls: Array) -> Array:
+	var events = []
+	if winner == "left":
+		for abl in left_abls:
+			if abl == "valor":
+				events.append({"side": "left",  "ability": abl, "trigger": "on_win",  "delta":  1, "next": true})
+			if abl == "shield":
+				events.append({"side": "right", "ability": abl, "trigger": "on_win",  "delta": -2, "next": true})
+			if abl == "storm":
+				events.append({"side": "right", "ability": abl, "trigger": "on_win",  "delta": -3, "next": true})
+		for abl in right_abls:
+			if abl == "spite":
+				events.append({"side": "right", "ability": abl, "trigger": "on_loss", "delta": -1, "next": true})
+			if abl == "martyr":
+				events.append({"side": "right", "ability": abl, "trigger": "on_loss", "delta":  2, "next": true})
+	elif winner == "right":
+		for abl in right_abls:
+			if abl == "valor":
+				events.append({"side": "right", "ability": abl, "trigger": "on_win",  "delta":  1, "next": true})
+			if abl == "shield":
+				events.append({"side": "left",  "ability": abl, "trigger": "on_win",  "delta": -2, "next": true})
+			if abl == "storm":
+				events.append({"side": "left",  "ability": abl, "trigger": "on_win",  "delta": -3, "next": true})
+		for abl in left_abls:
+			if abl == "spite":
+				events.append({"side": "left",  "ability": abl, "trigger": "on_loss", "delta": -1, "next": true})
+			if abl == "martyr":
+				events.append({"side": "left",  "ability": abl, "trigger": "on_loss", "delta":  2, "next": true})
+	elif winner == "tie":
+		for abl in left_abls:
+			if abl == "resilience":
+				events.append({"side": "left",  "ability": abl, "trigger": "on_tie", "delta": 3, "next": true})
+		for abl in right_abls:
+			if abl == "resilience":
+				events.append({"side": "right", "ability": abl, "trigger": "on_tie", "delta": 3, "next": true})
+	return events
+
+func post_flip_gold_events(winner: String, left_abls: Array, right_abls: Array, margin: int) -> Array:
+	var events = []
+	if winner == "right" and left_abls.has("comeback") and margin >= 3:
+		events.append({"side": "left",  "ability": "comeback",   "trigger": "on_loss", "delta": 2, "currency": "gold"})
+	if winner == "left"  and right_abls.has("comeback") and margin >= 3:
+		events.append({"side": "right", "ability": "comeback",   "trigger": "on_loss", "delta": 2, "currency": "gold"})
+	if winner == "left"  and left_abls.has("coin_press"):
+		events.append({"side": "left",  "ability": "coin_press", "trigger": "on_win",  "delta": 1, "currency": "gold"})
+	if winner == "right" and right_abls.has("coin_press"):
+		events.append({"side": "right", "ability": "coin_press", "trigger": "on_win",  "delta": 1, "currency": "gold"})
+	if winner == "left"  and left_abls.has("bounty") and margin >= 2:
+		events.append({"side": "left",  "ability": "bounty",     "trigger": "on_win",  "delta": 2, "currency": "gold"})
+	if winner == "right" and right_abls.has("bounty") and margin >= 2:
+		events.append({"side": "right", "ability": "bounty",     "trigger": "on_win",  "delta": 2, "currency": "gold"})
+	if winner == "tie" and left_abls.has("draw_power"):
+		events.append({"side": "left",  "ability": "draw_power", "trigger": "on_tie",  "delta": 1, "currency": "gold"})
+	if winner == "tie" and right_abls.has("draw_power"):
+		events.append({"side": "right", "ability": "draw_power", "trigger": "on_tie",  "delta": 1, "currency": "gold"})
+	if winner == "right" and left_abls.has("phoenix"):
+		events.append({"side": "left",  "ability": "phoenix",    "trigger": "on_loss", "delta": 1, "currency": "gold"})
+	if winner == "left"  and right_abls.has("phoenix"):
+		events.append({"side": "right", "ability": "phoenix",    "trigger": "on_loss", "delta": 1, "currency": "gold"})
+	return events
+
+# Convenience wrappers returning totals (used by RunEngine / legacy callers)
+func post_flip_deltas(winner: String, left_abls: Array, right_abls: Array) -> Dictionary:
 	var ld = 0
 	var rd = 0
-	if winner == "left":
-		if left_ability  == "valor": ld += 1
-		if right_ability == "spite": ld -= 1
-	elif winner == "right":
-		if right_ability == "valor": rd += 1
-		if left_ability  == "spite": rd -= 1
+	for ev in post_flip_events(winner, left_abls, right_abls):
+		if ev["side"] == "left":  ld += ev["delta"]
+		else:                     rd += ev["delta"]
 	return {"left_delta": ld, "right_delta": rd}
 
-func post_flip_gold_bonus(winner: String, left_ability: String, right_ability: String, margin: int) -> Dictionary:
-	var left_gold  = 0
-	var right_gold = 0
-	if winner == "right" and left_ability  == "comeback" and margin >= 3:
-		left_gold  += 2
-	if winner == "left"  and right_ability == "comeback" and margin >= 3:
-		right_gold += 2
-	return {"left_gold": left_gold, "right_gold": right_gold}
+func post_flip_gold_bonus(winner: String, left_abls: Array, right_abls: Array, margin: int) -> Dictionary:
+	var lg = 0
+	var rg = 0
+	for ev in post_flip_gold_events(winner, left_abls, right_abls, margin):
+		if ev["side"] == "left": lg += ev["delta"]
+		else:                    rg += ev["delta"]
+	return {"left_gold": lg, "right_gold": rg}
