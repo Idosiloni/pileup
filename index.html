@@ -16,27 +16,45 @@
       <button id="newBattleBtn" class="btn-primary">New battle</button>
     </header>
 
-    <section class="piles">
+    <section class="battlefield">
+
+      <!-- Left pile -->
       <div class="pile-panel" id="leftPilePanel">
         <div class="pile-header">
           <span class="pile-name">Player 1</span>
           <span class="pile-score" id="leftScore">Score: 0</span>
         </div>
+        <div class="pile-stack-wrap" id="leftStack"></div>
         <div class="pile-cards" id="leftCards"></div>
       </div>
+
+      <!-- Center arena -->
+      <div class="arena">
+        <div class="arena-status" id="arenaStatus">Press "New battle" to begin.</div>
+        <div class="staging-area">
+          <div class="staging-row-wrap">
+            <span class="staging-label">P1</span>
+            <div class="staging-row" id="leftStaging"></div>
+          </div>
+          <div class="staging-row-wrap">
+            <span class="staging-label">P2</span>
+            <div class="staging-row" id="rightStaging"></div>
+          </div>
+        </div>
+        <div class="flip-display" id="flipDisplay"></div>
+        <div class="arena-result" id="resultDisplay"></div>
+      </div>
+
+      <!-- Right pile -->
       <div class="pile-panel" id="rightPilePanel">
         <div class="pile-header">
           <span class="pile-name">Player 2</span>
           <span class="pile-score" id="rightScore">Score: 0</span>
         </div>
+        <div class="pile-stack-wrap" id="rightStack"></div>
         <div class="pile-cards" id="rightCards"></div>
       </div>
-    </section>
 
-    <section class="arena">
-      <div class="arena-status" id="arenaStatus">Press "New battle" to begin.</div>
-      <div class="flip-display" id="flipDisplay"></div>
-      <div class="arena-result" id="resultDisplay"></div>
     </section>
 
     <section class="log-panel">

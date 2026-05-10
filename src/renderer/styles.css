@@ -32,7 +32,7 @@ body {
 }
 
 .app {
-  max-width: 880px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 24px 20px 60px;
 }
@@ -72,17 +72,22 @@ body {
 .btn-primary:active { transform: scale(0.98); }
 .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.piles {
+/* ------------------------------------------------------------------
+   Battlefield: 3-column layout (pile | arena | pile)
+   ------------------------------------------------------------------ */
+
+.battlefield {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: 200px 1fr 200px;
+  gap: 12px;
   margin-bottom: 20px;
+  align-items: start;
 }
 
 .pile-panel {
   background: var(--bg-panel);
   border-radius: var(--radius-lg);
-  padding: 14px 14px 12px;
+  padding: 12px 12px 10px;
 }
 
 .pile-header {
@@ -95,25 +100,91 @@ body {
 .pile-name { font-size: 13px; font-weight: 500; }
 .pile-score { font-size: 13px; color: var(--text-muted); }
 
+/* ------------------------------------------------------------------
+   Pile stack visual (CSS card-back art)
+   ------------------------------------------------------------------ */
+
+.pile-stack-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.pile-stack-art {
+  position: relative;
+  width: 84px;
+  height: 110px;
+}
+
+.stack-ghost {
+  position: absolute;
+  width: 76px;
+  height: 104px;
+  background: var(--accent);
+  border-radius: var(--radius-md);
+}
+.stack-ghost.g1 { transform: translate(8px, 5px); opacity: 0.18; }
+.stack-ghost.g2 { transform: translate(4px, 2px); opacity: 0.42; }
+
+.stack-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 76px;
+  height: 104px;
+  background: var(--accent);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  gap: 3px;
+}
+
+.stack-count {
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.stack-label {
+  font-size: 10px;
+  opacity: 0.65;
+  letter-spacing: 0.3px;
+}
+
+/* ------------------------------------------------------------------
+   Pile cards grid — 2 columns in narrow panel
+   ------------------------------------------------------------------ */
+
 .pile-cards {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
 }
 
 .card-mini {
   background: var(--bg-card);
   border: 0.5px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 8px 4px 6px;
+  padding: 6px 3px 5px;
   text-align: center;
   font-weight: 500;
-  font-size: 15px;
+  font-size: 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  transition: opacity 0.3s, background 0.3s, border-color 0.3s, transform 0.3s;
+  transition: opacity 0.3s, background 0.3s, border-color 0.3s;
+}
+.card-mini.flipped {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.card-mini.unflipped-reveal {
+  opacity: 0.4;
 }
 
 .card-prob {
@@ -124,45 +195,112 @@ body {
 }
 
 .card-ability {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
   color: var(--accent);
   line-height: 1;
   letter-spacing: 0.3px;
   text-transform: uppercase;
 }
-.card-mini.flipped {
-  background: var(--accent-bg);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.card-mini.unflipped-reveal {
-  opacity: 0.45;
-}
+
+/* ------------------------------------------------------------------
+   Arena (center column)
+   ------------------------------------------------------------------ */
 
 .arena {
   background: var(--bg-card);
   border: 0.5px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 24px 20px;
-  min-height: 220px;
+  padding: 18px 16px;
+  min-height: 260px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  margin-bottom: 20px;
 }
 
 .arena-status {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-muted);
-  margin-bottom: 16px;
-  min-height: 20px;
+  margin-bottom: 14px;
+  min-height: 18px;
+  text-align: center;
 }
+
+/* ------------------------------------------------------------------
+   Staging area — face-down drawn cards waiting to flip
+   ------------------------------------------------------------------ */
+
+.staging-area {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.staging-row-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.staging-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  width: 18px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.staging-row {
+  display: flex;
+  gap: 5px;
+  min-height: 52px;
+  align-items: center;
+  flex: 1;
+}
+
+.card-staged {
+  width: 38px;
+  height: 52px;
+  border-radius: 6px;
+  background: var(--accent);
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.22s ease, transform 0.22s ease, background 0.2s, border-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 12px;
+  color: transparent;
+  flex-shrink: 0;
+}
+.card-staged.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.card-staged.face-up {
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  color: var(--text);
+}
+.card-staged.active {
+  outline: 2px solid var(--accent);
+  transform: translateY(-3px);
+}
+.card-staged.win  { background: var(--win-bg);  color: var(--win);  border-color: var(--win); }
+.card-staged.lose { background: var(--lose-bg); color: var(--lose); border-color: var(--lose); opacity: 0.65; }
+.card-staged.tie  { background: var(--tie-bg);  color: var(--tie);  border-color: var(--tie); }
+
+/* ------------------------------------------------------------------
+   Flip display
+   ------------------------------------------------------------------ */
 
 .flip-display {
   display: flex;
-  gap: 28px;
+  gap: 24px;
   align-items: center;
   min-height: 110px;
 }
@@ -176,22 +314,27 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 38px;
+  font-size: 36px;
   font-weight: 500;
-  transition: background 0.4s, border-color 0.4s, transform 0.3s, opacity 0.4s;
+  transition: background 0.4s, border-color 0.4s, opacity 0.4s;
 }
-.card-big.win { background: var(--win-bg); color: var(--win); border-color: var(--win); }
+.card-big.win  { background: var(--win-bg);  color: var(--win);  border-color: var(--win); }
 .card-big.lose { background: var(--lose-bg); color: var(--lose); border-color: var(--lose); opacity: 0.7; }
-.card-big.tie { background: var(--tie-bg); color: var(--tie); border-color: var(--tie); }
+.card-big.tie  { background: var(--tie-bg);  color: var(--tie);  border-color: var(--tie); }
 
-.vs { font-size: 14px; color: var(--text-muted); font-weight: 500; }
+.vs { font-size: 13px; color: var(--text-muted); font-weight: 500; }
 
 .arena-result {
   margin-top: 14px;
   font-size: 15px;
   font-weight: 500;
   min-height: 22px;
+  text-align: center;
 }
+
+/* ------------------------------------------------------------------
+   Log
+   ------------------------------------------------------------------ */
 
 .log-panel {
   background: var(--bg-panel);
