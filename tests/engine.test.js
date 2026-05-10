@@ -417,6 +417,44 @@ function approxEqual(actual, expected, tolerance, message) {
 })();
 
 // ------------------------------------------------------------------
+// selection.js — pileStats
+// ------------------------------------------------------------------
+
+(function testPileStats() {
+  const { pileStats, FLIP_COUNT } = require('../src/engine/selection.js');
+
+  const starter = makeStarterPile('t');
+  const stats = pileStats(starter);
+
+  // Starter: values 1-10, avg = 5.5
+  assert(stats.avgValue === 5.5, 'pileStats: starter avg value is 5.5');
+  assert(stats.oddCount  === 5,  'pileStats: starter has 5 odd values (1,3,5,7,9)');
+  assert(stats.evenCount === 5,  'pileStats: starter has 5 even values (2,4,6,8,10)');
+  assert(stats.totalWeight === 0,'pileStats: starter has 0 total weight');
+
+  // expectedValue uses the weight-approximation for flip prob (~41% per card for 10 equal cards).
+  // Σ(value × ~0.41) = 55 × ~0.41 ≈ 22.5 — just verify it's a positive non-trivial number.
+  assert(stats.expectedValue > 15 && stats.expectedValue < 35,
+    'pileStats: starter expectedValue is a plausible positive number');
+
+  // Weight affects totalWeight
+  const weightedPile = {
+    cards: [
+      makeCard(5, { weight: 50 }),
+      makeCard(5, { weight: -20 }),
+      makeCard(5),
+    ].concat(Array.from({length:7}, () => makeCard(5))),
+    ownerId: 't'
+  };
+  const ws = pileStats(weightedPile);
+  assert(ws.totalWeight === 30, 'pileStats: totalWeight sums weight modifiers (50 + -20 + 0…)');
+
+  // Empty pile edge case
+  const empty = pileStats({ cards: [], ownerId: 't' });
+  assert(empty.avgValue === 0 && empty.expectedValue === 0, 'pileStats: empty pile returns zeros');
+})();
+
+// ------------------------------------------------------------------
 // jokers.js
 // ------------------------------------------------------------------
 

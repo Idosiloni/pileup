@@ -664,6 +664,16 @@ body {
   color: var(--text-muted);
 }
 
+.pile-stats {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.pile-stats b { color: var(--text); font-weight: 600; }
+
 .shop-pile {
   display: flex;
   flex-direction: column;

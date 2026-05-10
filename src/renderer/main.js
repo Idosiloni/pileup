@@ -16,7 +16,7 @@
 
   // Engine imports
   const { makeRandomPile, upgradeCardValue } = window.PileupCards;
-  const { selectFlipped, flipProbabilities, FLIP_COUNT } = window.PileupSelection;
+  const { selectFlipped, flipProbabilities, pileStats, FLIP_COUNT } = window.PileupSelection;
   const { ABILITIES } = window.PileupAbilities;
   const { JOKERS, JOKER_POOL } = window.PileupJokers;
   const { simulateBattle } = window.PileupBattle;
@@ -191,7 +191,21 @@
   function renderShopPile() {
     const container = $('shopPlayerPile');
     container.innerHTML = '';
-    $('pileCount').textContent = run.playerPile.cards.length + ' / ' + effectivePileCap(run);
+    const cap = effectivePileCap(run);
+    $('pileCount').textContent = run.playerPile.cards.length + ' / ' + cap;
+
+    // Pile composition feedback (Section 11.5)
+    const stats = pileStats(run.playerPile);
+    const statsEl = document.createElement('div');
+    statsEl.className = 'pile-stats';
+    statsEl.innerHTML =
+      '<span>avg <b>' + stats.avgValue + '</b></span>' +
+      '<span>' + stats.oddCount + ' odd / ' + stats.evenCount + ' even</span>' +
+      '<span>exp <b>' + stats.expectedValue + '</b></span>' +
+      (stats.totalWeight !== 0
+        ? '<span>weight <b>' + (stats.totalWeight > 0 ? '+' : '') + stats.totalWeight + '</b></span>'
+        : '');
+    container.appendChild(statsEl);
     const probs = flipProbabilities(run.playerPile);
 
     run.playerPile.cards.forEach((card, i) => {

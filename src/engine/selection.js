@@ -119,17 +119,42 @@ function flipProbabilities(pile) {
   });
 }
 
+/**
+ * Compute live pile composition stats for the shop UI (Section 11.5).
+ * Returns:
+ *   avgValue      — mean card value (1 decimal)
+ *   oddCount      — number of odd-value cards
+ *   evenCount     — number of even-value cards
+ *   totalWeight   — sum of weight modifiers (shows how loaded the dice are)
+ *   expectedValue — Σ(value × flip_prob) across all cards, rounded to 1 decimal
+ *                   Estimates average battle contribution per card flip.
+ */
+function pileStats(pile) {
+  const cards = pile.cards;
+  const n = cards.length;
+  if (n === 0) return { avgValue: 0, oddCount: 0, evenCount: 0, totalWeight: 0, expectedValue: 0 };
+
+  const probs = flipProbabilities(pile);
+  const avgValue    = +(cards.reduce((s, c) => s + c.value,          0) / n).toFixed(1);
+  const oddCount    = cards.filter(c => c.value % 2 !== 0).length;
+  const evenCount   = n - oddCount;
+  const totalWeight = cards.reduce((s, c) => s + (c.weight || 0), 0);
+  const expectedValue = +(cards.reduce((s, c, i) => s + c.value * (probs[i] / 100), 0)).toFixed(1);
+
+  return { avgValue, oddCount, evenCount, totalWeight, expectedValue };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     FLIP_COUNT, BASE_WEIGHT, MIN_WEIGHT,
     effectiveWeight, weightedSample, shuffle,
-    selectFlipped, flipProbabilities
+    selectFlipped, flipProbabilities, pileStats
   };
 }
 if (typeof window !== 'undefined') {
   window.PileupSelection = {
     FLIP_COUNT, BASE_WEIGHT, MIN_WEIGHT,
     effectiveWeight, weightedSample, shuffle,
-    selectFlipped, flipProbabilities
+    selectFlipped, flipProbabilities, pileStats
   };
 }
