@@ -145,6 +145,11 @@ function approxEqual(actual, expected, tolerance, message) {
   assert(probs.length === 10, 'flipProbabilities returns one per card');
   assert(probs[0] > probs[9], 'heavier weight has higher flip probability');
   assert(probs.every(p => p >= 0 && p <= 100), 'probabilities are in [0, 100]');
+
+  // Neutral pile: all cards must show the same flip probability
+  const neutralPile = makeStarterPile('n');
+  const neutralProbs = flipProbabilities(neutralPile);
+  assert(neutralProbs.every(p => p === neutralProbs[0]), 'neutral pile has equal flip probabilities for all cards');
 })();
 
 // ------------------------------------------------------------------

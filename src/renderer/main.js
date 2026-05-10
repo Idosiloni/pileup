@@ -18,7 +18,7 @@
   'use strict';
 
   const { makeRandomPile } = window.PileupCards;
-  const { selectFlipped } = window.PileupSelection;
+  const { selectFlipped, flipProbabilities } = window.PileupSelection;
   const { simulateBattle } = window.PileupBattle;
 
   // Timing constants (ms). Tweak to taste.
@@ -39,13 +39,20 @@
   function renderPile(containerId, pile, flippedIdSet, showUnflipped) {
     const container = $(containerId);
     container.innerHTML = '';
-    pile.cards.forEach(card => {
+    const probs = flipProbabilities(pile);
+    pile.cards.forEach((card, i) => {
       const div = document.createElement('div');
       div.className = 'card-mini';
       const isFlipped = flippedIdSet && flippedIdSet.has(card.id);
       if (isFlipped) div.classList.add('flipped');
       if (showUnflipped && !isFlipped) div.classList.add('unflipped-reveal');
-      div.textContent = card.value;
+      const valueEl = document.createElement('span');
+      valueEl.textContent = card.value;
+      const probEl = document.createElement('span');
+      probEl.className = 'card-prob';
+      probEl.textContent = probs[i] + '%';
+      div.appendChild(valueEl);
+      div.appendChild(probEl);
       container.appendChild(div);
     });
   }
@@ -56,8 +63,14 @@
     for (let i = 0; i < 10; i++) {
       const div = document.createElement('div');
       div.className = 'card-mini';
-      div.textContent = '?';
       div.style.opacity = '0.5';
+      const valueEl = document.createElement('span');
+      valueEl.textContent = '?';
+      const probEl = document.createElement('span');
+      probEl.className = 'card-prob';
+      probEl.textContent = '–';
+      div.appendChild(valueEl);
+      div.appendChild(probEl);
       container.appendChild(div);
     }
   }

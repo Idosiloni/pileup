@@ -45,7 +45,9 @@ function makeCard(value, opts) {
 function makeRandomPile(ownerId) {
   const cards = [];
   for (let i = 0; i < 10; i++) {
-    cards.push(makeCard(Math.floor(Math.random() * 10) + 1));
+    const r = Math.random();
+    const weight = r < 0.15 ? 50 : r < 0.30 ? -50 : 0;
+    cards.push(makeCard(Math.floor(Math.random() * 10) + 1, { weight: weight }));
   }
   return { cards: cards, ownerId: ownerId || 'anon' };
 }
