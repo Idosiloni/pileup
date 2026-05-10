@@ -15,12 +15,12 @@
   'use strict';
 
   // Engine imports
-  const { makeRandomPile } = window.PileupCards;
+  const { makeRandomPile, upgradeCardValue } = window.PileupCards;
   const { selectFlipped, flipProbabilities, FLIP_COUNT } = window.PileupSelection;
   const { ABILITIES } = window.PileupAbilities;
   const { simulateBattle } = window.PileupBattle;
-  const { makeRun, buyCard, sellCard, canBuy, canSell,
-          applyBattleResult, CARD_COST, SELL_VALUE, STARTING_HP } = window.PileupRun;
+  const { makeRun, buyCard, sellCard, upgradeCard, canBuy, canSell, canUpgrade,
+          applyBattleResult, CARD_COST, SELL_VALUE, STARTING_HP, UPGRADE_COST } = window.PileupRun;
   const { generateShop, REROLL_COST } = window.PileupShop;
 
   const TIMING = {
@@ -56,6 +56,7 @@
     $('playerHP').textContent     = run.playerHP;
     $('aiHP').textContent         = run.aiHP;
     $('goldLabel').textContent    = run.gold + 'g';
+    $('manaLabel').textContent    = run.mana + 'm';
     $('roundLabel').textContent   = 'Round ' + run.round;
     $('playerHPFill').style.width = Math.max(0, run.playerHP / STARTING_HP * 100) + '%';
     $('aiHPFill').style.width     = Math.max(0, run.aiHP     / STARTING_HP * 100) + '%';
@@ -165,6 +166,17 @@
         info.appendChild(ablEl);
       }
 
+      // upgrade button
+      const upBtn = document.createElement('button');
+      upBtn.className   = 'btn-upgrade';
+      upBtn.textContent = '+1 (' + UPGRADE_COST + 'm)';
+      upBtn.disabled    = !canUpgrade(run);
+      upBtn.addEventListener('click', () => {
+        run = upgradeCard(run, card.id);
+        updateRunStatus();
+        renderShopPile();
+      });
+
       // sell button
       const sellBtn = document.createElement('button');
       sellBtn.className   = 'btn-sell';
@@ -180,6 +192,7 @@
       });
 
       row.appendChild(info);
+      row.appendChild(upBtn);
       row.appendChild(sellBtn);
       container.appendChild(row);
     });
@@ -290,7 +303,9 @@
 
     // Apply to run state
     const battleWinner = result.winner === 'left' ? 'player' : result.winner === 'right' ? 'ai' : 'tie';
+    const prevMana = run.mana;
     run = applyBattleResult(run, { winner: battleWinner, margin: result.margin });
+    logLine('+' + (run.mana - prevMana) + ' mana earned (' + run.mana + 'm total)');
     updateRunStatus();
 
     battleActive = false;

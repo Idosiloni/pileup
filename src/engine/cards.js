@@ -80,9 +80,17 @@ function makeStarterPile(ownerId) {
   return { cards: cards, ownerId: ownerId || 'anon' };
 }
 
+/**
+ * Return a copy of a card with value incremented by 1.
+ * Preserves id, weight, ability, position. No upper cap enforced here.
+ */
+function upgradeCardValue(card) {
+  return Object.assign({}, card, { value: card.value + 1 });
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { makeCard, makeRandomPile, makeStarterPile };
+  module.exports = { makeCard, makeRandomPile, makeStarterPile, upgradeCardValue };
 }
 if (typeof window !== 'undefined') {
-  window.PileupCards = { makeCard, makeRandomPile, makeStarterPile };
+  window.PileupCards = { makeCard, makeRandomPile, makeStarterPile, upgradeCardValue };
 }

@@ -6,7 +6,6 @@
  */
 
 if (typeof module !== 'undefined' && module.exports) {
-  // Node / tests
   const cards     = require('./cards.js');
   const selection = require('./selection.js');
   const abilities = require('./abilities.js');

@@ -7,7 +7,7 @@
  * guard against regressions when refactoring.
  */
 
-const { makeCard, makeRandomPile, makeStarterPile } = require('../src/engine/cards.js');
+const { makeCard, makeRandomPile, makeStarterPile, upgradeCardValue } = require('../src/engine/cards.js');
 const {
   FLIP_COUNT, BASE_WEIGHT, MIN_WEIGHT,
   effectiveWeight, weightedSample, shuffle,
@@ -306,8 +306,10 @@ function approxEqual(actual, expected, tolerance, message) {
 
 (function testRun() {
   const {
-    makeRun, buyCard, sellCard, canBuy, canSell, applyBattleResult,
-    STARTING_HP, STARTING_GOLD, CARD_COST, SELL_VALUE, MAX_PILE_SIZE
+    makeRun, buyCard, sellCard, upgradeCard, canBuy, canSell, canUpgrade,
+    applyBattleResult,
+    STARTING_HP, STARTING_GOLD, CARD_COST, SELL_VALUE, SELL_MANA,
+    MAX_PILE_SIZE, UPGRADE_COST, MANA_WIN, MANA_LOSS, MANA_TIE
   } = require('../src/engine/run.js');
 
   const run = makeRun();
@@ -315,6 +317,7 @@ function approxEqual(actual, expected, tolerance, message) {
   assert(run.playerHP === STARTING_HP, 'makeRun: playerHP is STARTING_HP');
   assert(run.aiHP === STARTING_HP, 'makeRun: aiHP is STARTING_HP');
   assert(run.gold === STARTING_GOLD, 'makeRun: gold is STARTING_GOLD');
+  assert(run.mana === 0, 'makeRun: mana starts at 0');
   assert(run.phase === 'shop', 'makeRun: phase is shop');
   assert(run.playerPile.cards.length === 10, 'makeRun: player starts with 10 cards');
 
@@ -348,6 +351,7 @@ function approxEqual(actual, expected, tolerance, message) {
   assert(canSell(run, sellId), 'canSell: true for a valid card id with >1 cards');
   const afterSell = sellCard(run, sellId);
   assert(afterSell.gold === STARTING_GOLD + SELL_VALUE, 'sellCard: adds SELL_VALUE to gold');
+  assert(afterSell.mana === SELL_MANA, 'sellCard: refunds SELL_MANA mana');
   assert(afterSell.playerPile.cards.length === 9, 'sellCard: removes card from pile');
 
   // can't sell unknown card
@@ -366,12 +370,14 @@ function approxEqual(actual, expected, tolerance, message) {
   assert(afterWin.playerHP === STARTING_HP, 'applyBattleResult: player win leaves playerHP intact');
   assert(afterWin.round === 2, 'applyBattleResult: advances round');
   assert(afterWin.gold === STARTING_GOLD, 'applyBattleResult: refills gold');
+  assert(afterWin.mana === MANA_WIN, 'applyBattleResult: player win earns MANA_WIN');
   assert(afterWin.phase === 'shop', 'applyBattleResult: phase back to shop when no one dies');
 
   // applyBattleResult — ai wins
   const afterLoss = applyBattleResult(run, { winner: 'ai', margin: 3 });
   assert(afterLoss.playerHP === STARTING_HP - 3, 'applyBattleResult: ai win damages playerHP');
   assert(afterLoss.aiHP === STARTING_HP, 'applyBattleResult: ai win leaves aiHP intact');
+  assert(afterLoss.mana === MANA_LOSS, 'applyBattleResult: loss earns MANA_LOSS');
 
   // damage caps at 3
   const bigMargin = applyBattleResult(run, { winner: 'ai', margin: 10 });
@@ -383,10 +389,31 @@ function approxEqual(actual, expected, tolerance, message) {
   assert(killed.playerHP === 0, 'applyBattleResult: HP floored at 0');
   assert(killed.phase === 'over', 'applyBattleResult: phase is over when playerHP hits 0');
 
-  // tie — no damage
+  // tie — no damage, earns MANA_TIE
   const afterTie = applyBattleResult(run, { winner: 'tie', margin: 0 });
   assert(afterTie.playerHP === STARTING_HP, 'applyBattleResult: tie does no damage to player');
   assert(afterTie.aiHP === STARTING_HP, 'applyBattleResult: tie does no damage to ai');
+  assert(afterTie.mana === MANA_TIE, 'applyBattleResult: tie earns MANA_TIE');
+
+  // upgradeCardValue (cards.js)
+  const plain5 = makeCard(5);
+  const up5 = upgradeCardValue(plain5);
+  assert(up5.value === 6, 'upgradeCardValue: increments value by 1');
+  assert(up5.id === plain5.id, 'upgradeCardValue: preserves card id');
+  assert(up5 !== plain5, 'upgradeCardValue: returns new object');
+
+  // upgradeCard (run.js)
+  assert(!canUpgrade(run), 'canUpgrade: false when mana < UPGRADE_COST (run starts at 0)');
+  const richRun = Object.assign({}, run, { mana: UPGRADE_COST + 2 });
+  assert(canUpgrade(richRun), 'canUpgrade: true when mana >= UPGRADE_COST');
+  const targetId = richRun.playerPile.cards[2].id;
+  const targetVal = richRun.playerPile.cards[2].value;
+  const afterUpgrade = upgradeCard(richRun, targetId);
+  assert(afterUpgrade.mana === richRun.mana - UPGRADE_COST, 'upgradeCard: deducts UPGRADE_COST mana');
+  const upgraded = afterUpgrade.playerPile.cards.find(c => c.id === targetId);
+  assert(upgraded.value === targetVal + 1, 'upgradeCard: card value incremented by 1');
+  assert(upgradeCard(run, targetId) === run, 'upgradeCard: no-op when mana < UPGRADE_COST');
+  assert(upgradeCard(richRun, 'bad-id') === richRun, 'upgradeCard: no-op for unknown card id');
 })();
 
 // ------------------------------------------------------------------
