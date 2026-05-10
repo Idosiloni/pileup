@@ -42,12 +42,27 @@ function makeCard(value, opts) {
  * Generate a random pile of 10 cards with values 1-10.
  * Used for prototyping and AI opponents.
  */
+var ABILITY_POOL = ['valor', 'spite', 'blaze'];
+
 function makeRandomPile(ownerId) {
   const cards = [];
   for (let i = 0; i < 10; i++) {
     const r = Math.random();
-    const weight = r < 0.15 ? 50 : r < 0.30 ? -50 : 0;
-    cards.push(makeCard(Math.floor(Math.random() * 10) + 1, { weight: weight }));
+    let ability, weight;
+    if (r < 0.20) {
+      ability = ABILITY_POOL[Math.floor(Math.random() * ABILITY_POOL.length)];
+      weight = 0;
+    } else if (r < 0.35) {
+      ability = undefined;
+      weight = 50;
+    } else if (r < 0.50) {
+      ability = undefined;
+      weight = -50;
+    } else {
+      ability = undefined;
+      weight = 0;
+    }
+    cards.push(makeCard(Math.floor(Math.random() * 10) + 1, { weight, ability }));
   }
   return { cards: cards, ownerId: ownerId || 'anon' };
 }

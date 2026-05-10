@@ -13,6 +13,7 @@ const {
   effectiveWeight, weightedSample, shuffle,
   selectFlipped, flipProbabilities
 } = require('../src/engine/selection.js');
+const { ABILITIES, onRevealBonus, postFlipDeltas } = require('../src/engine/abilities.js');
 const { resolveFlip, simulateBattle } = require('../src/engine/battle.js');
 
 let passed = 0;
@@ -192,6 +193,111 @@ function approxEqual(actual, expected, tolerance, message) {
   let threw = false;
   try { simulateBattle(left, right); } catch (e) { threw = true; }
   assert(threw, 'simulateBattle throws if selectionFn missing');
+})();
+
+// ------------------------------------------------------------------
+// abilities.js
+// ------------------------------------------------------------------
+
+(function testAbilities() {
+  // ABILITIES metadata
+  assert(typeof ABILITIES.valor === 'object', 'ABILITIES has valor');
+  assert(typeof ABILITIES.spite === 'object', 'ABILITIES has spite');
+  assert(typeof ABILITIES.blaze === 'object', 'ABILITIES has blaze');
+  assert(ABILITIES.valor.trigger === 'on_win', 'valor trigger is on_win');
+  assert(ABILITIES.spite.trigger === 'on_loss', 'spite trigger is on_loss');
+  assert(ABILITIES.blaze.trigger === 'on_reveal', 'blaze trigger is on_reveal');
+
+  // onRevealBonus
+  assert(onRevealBonus('blaze') === 2, 'blaze gives +2 on reveal');
+  assert(onRevealBonus('valor') === 0, 'valor gives 0 on reveal');
+  assert(onRevealBonus(undefined) === 0, 'no ability gives 0 on reveal');
+
+  // postFlipDeltas
+  const vWin = postFlipDeltas('left', 'valor', undefined);
+  assert(vWin.leftDelta === 1, 'valor on win: left next +1');
+  assert(vWin.rightDelta === 0, 'valor on win: right unaffected');
+
+  const sLoss = postFlipDeltas('left', undefined, 'spite');
+  assert(sLoss.leftDelta === -1, 'spite on loss (right card): left next -1');
+
+  const sLossLeft = postFlipDeltas('right', 'spite', undefined);
+  assert(sLossLeft.rightDelta === -1, 'spite on loss (left card): right next -1');
+
+  assert(postFlipDeltas('tie', 'valor', 'spite').leftDelta === 0, 'no triggers on tie');
+  assert(postFlipDeltas('tie', 'valor', 'spite').rightDelta === 0, 'no triggers on tie (right)');
+})();
+
+// ------------------------------------------------------------------
+// ability integration in simulateBattle
+// ------------------------------------------------------------------
+
+(function testAbilityIntegration() {
+  // Fixed selectionFn returns first 5 cards in order — deterministic battles.
+  const fixedSelect = pile => pile.cards.slice(0, 5);
+
+  // Valor: left card wins flip 0, next left card (flip 1) gets +1.
+  // Setup: left[0]=10(valor) vs right[0]=1 → left wins → leftPending=+1
+  //        left[1]=4 vs right[1]=4 → 4+1=5 vs 4 → left wins (would tie without valor)
+  const valorLeft = [
+    makeCard(10, { ability: 'valor' }),
+    makeCard(4), makeCard(5), makeCard(5), makeCard(5)
+  ];
+  const valorRight = [
+    makeCard(1),
+    makeCard(4), makeCard(4), makeCard(4), makeCard(4)
+  ];
+  const vResult = simulateBattle(
+    { cards: valorLeft, ownerId: 'l' },
+    { cards: valorRight, ownerId: 'r' },
+    fixedSelect
+  );
+  assert(vResult.flips[0].winner === 'left', 'valor flip 0: left wins');
+  assert(vResult.flips[1].leftEffective === 5, 'valor: next card left effective = 4+1 = 5');
+  assert(vResult.flips[1].winner === 'left', 'valor: next flip wins due to +1 bonus');
+
+  // Spite: right card loses flip 0, left's next card (flip 1) gets -1.
+  // Setup: left[0]=10 vs right[0]=1(spite) → left wins, spite triggers → leftPending=-1
+  //        left[1]=4 vs right[1]=3 → 4-1=3 vs 3 → tie (would be left win without spite)
+  const spiteLeft = [
+    makeCard(10),
+    makeCard(4), makeCard(5), makeCard(5), makeCard(5)
+  ];
+  const spiteRight = [
+    makeCard(1, { ability: 'spite' }),
+    makeCard(3), makeCard(3), makeCard(3), makeCard(3)
+  ];
+  const sResult = simulateBattle(
+    { cards: spiteLeft, ownerId: 'l' },
+    { cards: spiteRight, ownerId: 'r' },
+    fixedSelect
+  );
+  assert(sResult.flips[0].winner === 'left', 'spite flip 0: left wins normally');
+  assert(sResult.flips[1].leftEffective === 3, 'spite: left next effective = 4-1 = 3');
+  assert(sResult.flips[1].winner === 'tie', 'spite: next flip is now a tie');
+
+  // Blaze: left card with blaze gets +2 on reveal, flips at value+2.
+  // Setup: left[0]=3(blaze) vs right[0]=4 → 3+2=5 vs 4 → left wins (would lose without blaze)
+  const blazeLeft = [
+    makeCard(3, { ability: 'blaze' }),
+    makeCard(5), makeCard(5), makeCard(5), makeCard(5)
+  ];
+  const blazeRight = [
+    makeCard(4),
+    makeCard(4), makeCard(4), makeCard(4), makeCard(4)
+  ];
+  const bResult = simulateBattle(
+    { cards: blazeLeft, ownerId: 'l' },
+    { cards: blazeRight, ownerId: 'r' },
+    fixedSelect
+  );
+  assert(bResult.flips[0].leftEffective === 5, 'blaze: effective = 3+2 = 5');
+  assert(bResult.flips[0].winner === 'left', 'blaze: wins flip that would otherwise lose');
+
+  // Effective values are recorded on every flip even with no abilities.
+  const plain = simulateBattle(makeStarterPile('l'), makeStarterPile('r'), fixedSelect);
+  assert(plain.flips.every(f => f.leftEffective === f.left.value), 'no ability: leftEffective equals raw value');
+  assert(plain.flips.every(f => f.rightEffective === f.right.value), 'no ability: rightEffective equals raw value');
 })();
 
 // ------------------------------------------------------------------

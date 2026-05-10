@@ -19,6 +19,7 @@
 
   const { makeRandomPile } = window.PileupCards;
   const { selectFlipped, flipProbabilities } = window.PileupSelection;
+  const { ABILITIES } = window.PileupAbilities;
   const { simulateBattle } = window.PileupBattle;
 
   // Timing constants (ms). Tweak to taste.
@@ -53,6 +54,12 @@
       probEl.textContent = probs[i] + '%';
       div.appendChild(valueEl);
       div.appendChild(probEl);
+      if (card.ability && ABILITIES[card.ability]) {
+        const abilEl = document.createElement('span');
+        abilEl.className = 'card-ability';
+        abilEl.textContent = ABILITIES[card.ability].label;
+        div.appendChild(abilEl);
+      }
       container.appendChild(div);
     });
   }
@@ -75,24 +82,31 @@
     }
   }
 
-  function showFlipPair(leftCard, rightCard, result) {
+  function cardBigLabel(card, effective) {
+    if (effective !== undefined && effective !== card.value) {
+      return card.value + '→' + effective;
+    }
+    return String(card.value);
+  }
+
+  function showFlipPair(flip) {
     const display = $('flipDisplay');
     display.innerHTML = '';
     const lc = document.createElement('div');
     lc.className = 'card-big';
-    lc.textContent = leftCard.value;
+    lc.textContent = cardBigLabel(flip.left, flip.leftEffective);
     const vs = document.createElement('div');
     vs.className = 'vs';
     vs.textContent = 'vs';
     const rc = document.createElement('div');
     rc.className = 'card-big';
-    rc.textContent = rightCard.value;
+    rc.textContent = cardBigLabel(flip.right, flip.rightEffective);
     display.appendChild(lc);
     display.appendChild(vs);
     display.appendChild(rc);
     setTimeout(() => {
-      if (result.winner === 'left') { lc.classList.add('win'); rc.classList.add('lose'); }
-      else if (result.winner === 'right') { rc.classList.add('win'); lc.classList.add('lose'); }
+      if (flip.winner === 'left') { lc.classList.add('win'); rc.classList.add('lose'); }
+      else if (flip.winner === 'right') { rc.classList.add('win'); lc.classList.add('lose'); }
       else { lc.classList.add('tie'); rc.classList.add('tie'); }
     }, TIMING.FLIP_RESULT_DELAY);
   }
@@ -155,7 +169,7 @@
     for (let i = 0; i < result.flips.length; i++) {
       const flip = result.flips[i];
       setStatus('Flip ' + (i + 1) + ' of ' + result.flips.length);
-      showFlipPair(flip.left, flip.right, flip);
+      showFlipPair(flip);
       if (flip.winner === 'left') leftScore += 1;
       else if (flip.winner === 'right') rightScore += 1;
       $('leftScore').textContent = 'Score: ' + leftScore;
@@ -163,7 +177,17 @@
       const winnerText = flip.winner === 'tie'
         ? 'tie'
         : 'P' + (flip.winner === 'left' ? '1' : '2') + ' wins by ' + flip.delta;
-      logLine('Flip ' + (i + 1) + ': P1 ' + flip.left.value + ' vs P2 ' + flip.right.value + ' — ' + winnerText);
+      const lVal = flip.leftEffective !== flip.left.value ? flip.left.value + '→' + flip.leftEffective : flip.left.value;
+      const rVal = flip.rightEffective !== flip.right.value ? flip.right.value + '→' + flip.rightEffective : flip.right.value;
+      logLine('Flip ' + (i + 1) + ': P1 ' + lVal + ' vs P2 ' + rVal + ' — ' + winnerText);
+      flip.events.forEach(ev => {
+        if (ev.trigger && ev.ability) {
+          const who = ev.side === 'left' ? 'P1' : 'P2';
+          const sign = ev.delta > 0 ? '+' : '';
+          const nextNote = ev.next ? ' (next card)' : '';
+          logLine('  ' + who + ' ' + ev.ability + ' [' + ev.trigger + ']: ' + sign + ev.delta + nextNote);
+        }
+      });
       await sleep(TIMING.FLIP_INTERVAL);
     }
 

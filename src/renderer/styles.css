@@ -122,6 +122,15 @@ body {
   color: var(--text-muted);
   line-height: 1;
 }
+
+.card-ability {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
 .card-mini.flipped {
   background: var(--accent-bg);
   border-color: var(--accent);
