@@ -575,6 +575,37 @@ body {
   font-weight: 500;
 }
 
+.shop-card-frozen {
+  border-color: #5ba3c8;
+  background: #edf6fb;
+}
+
+.shop-card-actions {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.shop-card-actions .btn-buy {
+  flex: 1;
+}
+
+.btn-freeze {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 7px 10px;
+  background: transparent;
+  color: #5ba3c8;
+  border: 0.5px solid #5ba3c8;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.btn-freeze:hover { background: #edf6fb; }
+
 .btn-buy {
   font-family: inherit;
   font-size: 12px;

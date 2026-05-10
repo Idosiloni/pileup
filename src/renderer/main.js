@@ -36,6 +36,7 @@
 
   let run            = null;
   let currentShop    = null;
+  let frozenIndices  = new Set();  // shop card indices that survive a reroll
   let battleActive   = false;
   let flipResolve    = null;  // resolves when player presses Flip / Continue
 
@@ -72,7 +73,15 @@
   function showShopPhase() {
     $('shopSection').hidden    = false;
     $('battleSection').hidden  = true;
-    currentShop = generateShop(run.round);
+    // Keep frozen cards, regenerate unfrozen slots
+    const prevCards  = currentShop ? currentShop.cards : [];
+    const newShop    = generateShop(run.round);
+    const mergedCards = [];
+    for (let i = 0; i < 4; i++) {
+      mergedCards.push(frozenIndices.has(i) && prevCards[i] ? prevCards[i] : newShop.cards[i]);
+    }
+    currentShop = { cards: mergedCards };
+    frozenIndices = new Set();  // freeze expires when entering shop (cards are now "this turn's" shop)
     renderShop();
     renderJokerShop();
     renderShopPile();
@@ -139,9 +148,9 @@
   function renderShop() {
     const container = $('shopCards');
     container.innerHTML = '';
-    currentShop.cards.forEach(card => {
+    currentShop.cards.forEach((card, idx) => {
       const wrap = document.createElement('div');
-      wrap.className = 'shop-card';
+      wrap.className = 'shop-card' + (frozenIndices.has(idx) ? ' shop-card-frozen' : '');
 
       // --- card preview ---
       const preview = document.createElement('div');
@@ -166,24 +175,38 @@
         preview.appendChild(ablEl);
       }
 
-      // --- buy button ---
+      // --- bottom row: freeze + buy ---
+      const bottomRow = document.createElement('div');
+      bottomRow.className = 'shop-card-actions';
+
+      const freezeBtn = document.createElement('button');
+      freezeBtn.className   = 'btn-freeze';
+      freezeBtn.textContent = frozenIndices.has(idx) ? '❄ Frozen' : 'Freeze';
+      freezeBtn.addEventListener('click', () => {
+        if (frozenIndices.has(idx)) frozenIndices.delete(idx);
+        else                         frozenIndices.add(idx);
+        renderShop();
+      });
+
       const buyBtn = document.createElement('button');
       buyBtn.className   = 'btn-buy';
       buyBtn.textContent = CARD_COST + 'g — Buy';
       buyBtn.disabled    = !canBuy(run);
       buyBtn.addEventListener('click', () => {
         run = buyCard(run, card);
+        frozenIndices.delete(idx);
         updateRunStatus();
-        wrap.remove();            // remove from shop display
+        wrap.remove();
         renderShopPile();
-        // refresh remaining buy buttons
         $('shopCards').querySelectorAll('.btn-buy').forEach(b => {
           b.disabled = !canBuy(run);
         });
       });
 
+      bottomRow.appendChild(freezeBtn);
+      bottomRow.appendChild(buyBtn);
       wrap.appendChild(preview);
-      wrap.appendChild(buyBtn);
+      wrap.appendChild(bottomRow);
       container.appendChild(wrap);
     });
   }
@@ -545,7 +568,9 @@
       if (!run || run.gold < REROLL_COST) return;
       run = Object.assign({}, run, { gold: run.gold - REROLL_COST });
       updateRunStatus();
-      currentShop = generateShop(run.round);
+      const fresh = generateShop(run.round);
+      const merged = currentShop.cards.map((c, i) => frozenIndices.has(i) ? c : fresh.cards[i]);
+      currentShop = { cards: merged };
       renderShop();
     });
 
