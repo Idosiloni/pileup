@@ -417,6 +417,87 @@ function approxEqual(actual, expected, tolerance, message) {
 })();
 
 // ------------------------------------------------------------------
+// jokers.js
+// ------------------------------------------------------------------
+
+(function testJokers() {
+  const {
+    JOKERS, JOKER_POOL, JOKER_COST,
+    applyJokerPreFlip, applyJokerTie,
+    jokerManaBonusOnWin, jokerPileCap, jokerFlipCount, sniperAnchorId
+  } = require('../src/engine/jokers.js');
+  const { simulateBattle } = require('../src/engine/battle.js');
+  const { makeRun, buyJoker, canBuyJoker, effectivePileCap } = require('../src/engine/run.js');
+
+  assert(typeof JOKERS.tiebreaker === 'object', 'JOKERS has tiebreaker');
+  assert(typeof JOKERS.sniper     === 'object', 'JOKERS has sniper');
+  assert(typeof JOKERS.hoarder    === 'object', 'JOKERS has hoarder');
+  assert(JOKER_POOL.length >= 6, 'JOKER_POOL has at least 6 Jokers');
+
+  // Tiebreaker: tie → left win
+  const tieFlip = { winner: 'tie', delta: 0 };
+  assert(applyJokerTie('tiebreaker', tieFlip).winner === 'left', 'tiebreaker converts tie to left win');
+  assert(applyJokerTie(null, tieFlip).winner === 'tie', 'no joker: tie stays tie');
+  const winFlip = { winner: 'left', delta: 1 };
+  assert(applyJokerTie('tiebreaker', winFlip).winner === 'left', 'tiebreaker does not affect non-tie');
+
+  // Underdog: left card lower value → +2
+  const lc = makeCard(3), rc = makeCard(7);
+  const ud = applyJokerPreFlip('underdog', lc, rc, lc.value, rc.value, 0);
+  assert(ud.leftEff === 5, 'underdog: low left card gets +2');
+  const ud2 = applyJokerPreFlip('underdog', makeCard(8), makeCard(3), 8, 3, 0);
+  assert(ud2.leftEff === 8, 'underdog: no bonus when left >= right');
+
+  // Streak: streakCount added to leftEff
+  const sk = applyJokerPreFlip('streak', makeCard(5), makeCard(5), 5, 5, 3);
+  assert(sk.leftEff === 8, 'streak: +3 from streak count of 3');
+
+  // Hoarder: pile cap = 12
+  assert(jokerPileCap('hoarder') === 12, 'hoarder: pile cap 12');
+  assert(jokerPileCap(null) === null, 'no joker: pile cap null');
+
+  // Gambler: 4 flips
+  assert(jokerFlipCount('gambler') === 4, 'gambler: flip count 4');
+  assert(jokerFlipCount(null) === null, 'no joker: flip count null');
+
+  // Gambler: mana bonus on win
+  assert(jokerManaBonusOnWin('gambler') === 2, 'gambler: +2 mana on win');
+  assert(jokerManaBonusOnWin(null) === 0, 'no joker: 0 mana bonus');
+
+  // Sniper: anchor id = highest value card
+  const sniperPile = { cards: [makeCard(3), makeCard(9), makeCard(5)], ownerId: 't' };
+  const anchorId = sniperAnchorId(sniperPile);
+  assert(anchorId === sniperPile.cards[1].id, 'sniper: anchors the highest card');
+
+  // buyJoker / canBuyJoker
+  const run = makeRun();
+  assert(canBuyJoker(run, 'tiebreaker'), 'canBuyJoker: true when can afford and no joker');
+  const afterJoker = buyJoker(run, 'tiebreaker');
+  assert(afterJoker.joker === 'tiebreaker', 'buyJoker: sets joker id');
+  assert(afterJoker.gold === run.gold - JOKER_COST, 'buyJoker: deducts JOKER_COST');
+  assert(!canBuyJoker(afterJoker, 'sniper'), 'canBuyJoker: false when already have joker');
+  const brokeRun = Object.assign({}, run, { gold: JOKER_COST - 1 });
+  assert(!canBuyJoker(brokeRun, 'tiebreaker'), 'canBuyJoker: false when insufficient gold');
+
+  // effectivePileCap: hoarder raises to 12
+  const hoarderRun = buyJoker(run, 'hoarder');
+  assert(effectivePileCap(hoarderRun) === 12, 'hoarder run: effectivePileCap is 12');
+  assert(effectivePileCap(run) === 10, 'default run: effectivePileCap is 10');
+
+  // Joker integration in simulateBattle — tiebreaker
+  const fixAll5 = pile => pile.cards.slice(0, 5);
+  const allFives = { cards: Array.from({length:5}, () => makeCard(5)), ownerId: 't' };
+  const withJoker = simulateBattle(allFives, allFives, fixAll5, 'tiebreaker');
+  assert(withJoker.flips.every(f => f.winner === 'left'), 'tiebreaker: all ties become left wins');
+  assert(withJoker.winner === 'left', 'tiebreaker: left wins the battle (all ties resolved for left)');
+
+  // Gambler: only 4 flips
+  const pile5 = { cards: Array.from({length:5}, () => makeCard(5)), ownerId: 't' };
+  const gamblerResult = simulateBattle(pile5, pile5, fixAll5, 'gambler');
+  assert(gamblerResult.flips.length === 4, 'gambler: battle has 4 flips');
+})();
+
+// ------------------------------------------------------------------
 // abilities.js (v0.6 additions)
 // ------------------------------------------------------------------
 

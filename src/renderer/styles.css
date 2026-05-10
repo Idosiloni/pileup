@@ -455,6 +455,15 @@ body {
   font-weight: 500;
 }
 
+.run-joker {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tie);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  min-height: 14px;
+}
+
 /* ------------------------------------------------------------------
    Section titles
    ------------------------------------------------------------------ */
@@ -581,6 +590,63 @@ body {
 }
 .btn-buy:hover    { opacity: 0.82; }
 .btn-buy:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ------------------------------------------------------------------
+   Shop — player pile
+   ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------
+   Joker shop
+   ------------------------------------------------------------------ */
+
+.joker-shop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  margin-top: 4px;
+}
+
+.joker-shop-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.joker-shop-slot {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.joker-card {
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.joker-card-active {
+  border-color: var(--tie);
+  background: var(--tie-bg);
+}
+
+.joker-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tie);
+}
+
+.joker-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
 
 /* ------------------------------------------------------------------
    Shop — player pile

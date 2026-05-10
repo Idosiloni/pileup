@@ -9,8 +9,9 @@ if (typeof module !== 'undefined' && module.exports) {
   const cards     = require('./cards.js');
   const selection = require('./selection.js');
   const abilities = require('./abilities.js');
+  const jokers    = require('./jokers.js');
   const battle    = require('./battle.js');
   const run       = require('./run.js');
   const shop      = require('./shop.js');
-  module.exports = Object.assign({}, cards, selection, abilities, battle, run, shop);
+  module.exports = Object.assign({}, cards, selection, abilities, jokers, battle, run, shop);
 }

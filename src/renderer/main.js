@@ -18,8 +18,10 @@
   const { makeRandomPile, upgradeCardValue } = window.PileupCards;
   const { selectFlipped, flipProbabilities, FLIP_COUNT } = window.PileupSelection;
   const { ABILITIES } = window.PileupAbilities;
+  const { JOKERS, JOKER_POOL } = window.PileupJokers;
   const { simulateBattle } = window.PileupBattle;
-  const { makeRun, buyCard, sellCard, upgradeCard, canBuy, canSell, canUpgrade,
+  const { makeRun, buyCard, sellCard, upgradeCard, buyJoker, canBuy, canSell,
+          canUpgrade, canBuyJoker, effectivePileCap,
           applyBattleResult, CARD_COST, SELL_VALUE, STARTING_HP, UPGRADE_COST } = window.PileupRun;
   const { generateShop, REROLL_COST } = window.PileupShop;
 
@@ -60,6 +62,7 @@
     $('roundLabel').textContent   = 'Round ' + run.round;
     $('playerHPFill').style.width = Math.max(0, run.playerHP / STARTING_HP * 100) + '%';
     $('aiHPFill').style.width     = Math.max(0, run.aiHP     / STARTING_HP * 100) + '%';
+    $('jokerLabel').textContent   = run.joker ? JOKERS[run.joker].name : '';
   }
 
   // ------------------------------------------------------------------
@@ -71,8 +74,66 @@
     $('battleSection').hidden  = true;
     currentShop = generateShop(run.round);
     renderShop();
+    renderJokerShop();
     renderShopPile();
     updateRunStatus();
+  }
+
+  function renderJokerShop() {
+    const slot = $('jokerShopSlot');
+    slot.innerHTML = '';
+    const hint = $('jokerShopHint');
+
+    if (run.joker) {
+      // Show active Joker
+      const active = document.createElement('div');
+      active.className = 'joker-card joker-card-active';
+      const nameEl = document.createElement('span');
+      nameEl.className = 'joker-name';
+      nameEl.textContent = JOKERS[run.joker].name;
+      const descEl = document.createElement('span');
+      descEl.className = 'joker-desc';
+      descEl.textContent = JOKERS[run.joker].description;
+      active.appendChild(nameEl);
+      active.appendChild(descEl);
+      slot.appendChild(active);
+      hint.textContent = 'Active Joker';
+      return;
+    }
+
+    hint.textContent = 'One Joker per run';
+    // Offer 3 random Jokers to buy
+    const offered = [];
+    const pool = JOKER_POOL.slice();
+    for (let i = 0; i < 3 && pool.length > 0; i++) {
+      const idx = Math.floor(Math.random() * pool.length);
+      offered.push(pool.splice(idx, 1)[0]);
+    }
+    offered.forEach(jokerId => {
+      const j = JOKERS[jokerId];
+      const card = document.createElement('div');
+      card.className = 'joker-card';
+      const nameEl = document.createElement('span');
+      nameEl.className = 'joker-name';
+      nameEl.textContent = j.name;
+      const descEl = document.createElement('span');
+      descEl.className = 'joker-desc';
+      descEl.textContent = j.description;
+      const buyBtn = document.createElement('button');
+      buyBtn.className = 'btn-buy';
+      buyBtn.textContent = j.cost + 'g — Buy';
+      buyBtn.disabled = !canBuyJoker(run, jokerId);
+      buyBtn.addEventListener('click', () => {
+        run = buyJoker(run, jokerId);
+        updateRunStatus();
+        renderJokerShop();
+        renderShopPile();
+      });
+      card.appendChild(nameEl);
+      card.appendChild(descEl);
+      card.appendChild(buyBtn);
+      slot.appendChild(card);
+    });
   }
 
   function renderShop() {
@@ -130,7 +191,7 @@
   function renderShopPile() {
     const container = $('shopPlayerPile');
     container.innerHTML = '';
-    $('pileCount').textContent = run.playerPile.cards.length + ' / 10';
+    $('pileCount').textContent = run.playerPile.cards.length + ' / ' + effectivePileCap(run);
     const probs = flipProbabilities(run.playerPile);
 
     run.playerPile.cards.forEach((card, i) => {
@@ -229,7 +290,7 @@
     $('rightScore').textContent = 'Score: 0';
 
     // Engine resolves the whole battle up front; animation is a replay.
-    const result = simulateBattle(leftPile, rightPile, selectFlipped);
+    const result = simulateBattle(leftPile, rightPile, selectFlipped, run.joker);
 
     let leftScore = 0, rightScore = 0;
     const leftFlippedSet  = new Set();
@@ -305,12 +366,15 @@
     const battleWinner = result.winner === 'left' ? 'player' : result.winner === 'right' ? 'ai' : 'tie';
     const prevMana = run.mana;
     run = applyBattleResult(run, {
-      winner:    battleWinner,
-      margin:    result.margin,
-      goldBonus: result.leftGoldBonus  // player is always left in single-player
+      winner:         battleWinner,
+      margin:         result.margin,
+      goldBonus:      result.leftGoldBonus,
+      jokerManaBonus: result.jokerManaBonus
     });
-    logLine('+' + (run.mana - prevMana) + 'm earned'
-      + (result.leftGoldBonus > 0 ? ', +' + result.leftGoldBonus + 'g comeback' : '')
+    const manaGained = run.mana - prevMana;
+    logLine('+' + manaGained + 'm earned'
+      + (result.leftGoldBonus  > 0 ? ', +' + result.leftGoldBonus  + 'g comeback' : '')
+      + (result.jokerManaBonus > 0 ? ', +' + result.jokerManaBonus + 'm (Joker)'  : '')
       + ' (' + run.mana + 'm total)');
     updateRunStatus();
 

@@ -30,6 +30,14 @@ function getCardsRun() {
   return _cardsRun;
 }
 
+var _jokersRun = null;
+function getJokersRun() {
+  if (_jokersRun) return _jokersRun;
+  _jokersRun = (typeof module !== 'undefined' && module.exports)
+    ? require('./jokers.js') : window.PileupJokers;
+  return _jokersRun;
+}
+
 /**
  * Create the initial run state. Player starts with the canonical starter pile.
  */
@@ -40,6 +48,7 @@ function makeRun() {
     aiHP:       STARTING_HP,
     gold:       STARTING_GOLD,
     mana:       0,
+    joker:      null,   // active Joker id, or null
     playerPile: getCardsRun().makeStarterPile('player'),
     phase:      'shop'
   };
@@ -94,9 +103,32 @@ function upgradeCard(run, cardId) {
   });
 }
 
-function canBuy(run)            { return run.gold >= CARD_COST && run.playerPile.cards.length < MAX_PILE_SIZE; }
+function effectivePileCap(run) {
+  var jokerCap = getJokersRun().jokerPileCap(run.joker);
+  return jokerCap !== null ? jokerCap : MAX_PILE_SIZE;
+}
+
+function canBuy(run)            { return run.gold >= CARD_COST && run.playerPile.cards.length < effectivePileCap(run); }
 function canSell(run, cardId)   { return run.playerPile.cards.length > 1 && run.playerPile.cards.some(function(c){ return c.id === cardId; }); }
 function canUpgrade(run)        { return run.mana >= UPGRADE_COST; }
+
+/**
+ * Buy a Joker. Player may hold only 1 Joker at a time.
+ * Returns unchanged run if can't afford or already has a Joker.
+ */
+function buyJoker(run, jokerId) {
+  var jk = getJokersRun();
+  if (!jk.JOKERS[jokerId]) return run;
+  var cost = jk.JOKERS[jokerId].cost;
+  if (run.gold < cost) return run;
+  return Object.assign({}, run, { gold: run.gold - cost, joker: jokerId });
+}
+
+function canBuyJoker(run, jokerId) {
+  var jk = getJokersRun();
+  if (!jk.JOKERS[jokerId]) return false;
+  return run.gold >= jk.JOKERS[jokerId].cost && run.joker === null;
+}
 
 /**
  * Apply the result of a battle to the run.
@@ -113,9 +145,9 @@ function applyBattleResult(run, battleResult) {
   if (battleResult.winner === 'player') newAiHP     = Math.max(0, run.aiHP - damage);
   var phase = (newPlayerHP <= 0 || newAiHP <= 0) ? 'over' : 'shop';
 
-  var manaEarned = battleResult.winner === 'player' ? MANA_WIN
-                 : battleResult.winner === 'ai'     ? MANA_LOSS
-                 : MANA_TIE;
+  var manaEarned = (battleResult.winner === 'player' ? MANA_WIN
+                  : battleResult.winner === 'ai'    ? MANA_LOSS
+                  : MANA_TIE) + (battleResult.jokerManaBonus || 0);
 
   return Object.assign({}, run, {
     round:    run.round + 1,
@@ -131,7 +163,8 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     STARTING_HP, STARTING_GOLD, CARD_COST, SELL_VALUE, SELL_MANA,
     MAX_PILE_SIZE, UPGRADE_COST, MANA_WIN, MANA_LOSS, MANA_TIE,
-    makeRun, buyCard, sellCard, upgradeCard, canBuy, canSell, canUpgrade,
+    makeRun, buyCard, sellCard, upgradeCard, buyJoker,
+    canBuy, canSell, canUpgrade, canBuyJoker, effectivePileCap,
     applyBattleResult
   };
 }
@@ -139,7 +172,8 @@ if (typeof window !== 'undefined') {
   window.PileupRun = {
     STARTING_HP, STARTING_GOLD, CARD_COST, SELL_VALUE, SELL_MANA,
     MAX_PILE_SIZE, UPGRADE_COST, MANA_WIN, MANA_LOSS, MANA_TIE,
-    makeRun, buyCard, sellCard, upgradeCard, canBuy, canSell, canUpgrade,
+    makeRun, buyCard, sellCard, upgradeCard, buyJoker,
+    canBuy, canSell, canUpgrade, canBuyJoker, effectivePileCap,
     applyBattleResult
   };
 }
