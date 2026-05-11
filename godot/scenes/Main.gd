@@ -366,61 +366,98 @@ func _build_battle_section(parent: Control) -> void:
 	right_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 
 # ── card visual ───────────────────────────────────────────────────────────────
+func _card_suit(value: int) -> String:
+	if value <= 2:  return "♣"
+	if value <= 5:  return "♦"
+	if value <= 8:  return "♥"
+	return "♠"
+
 func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 		selected: bool = false, prob: int = -1) -> PanelContainer:
-	var abls   = card.get("abilities", [])
-	var first_abl = abls[0] if not abls.is_empty() else ""
-	var border = ability_color(first_abl) if not first_abl.is_empty() else Color(0.22, 0.22, 0.36)
+	var abls     = card.get("abilities", [])
+	var val      = card["value"]
+	var has_abls = not abls.is_empty()
+	var first_abl = abls[0] if has_abls else ""
+	var abl_clr  = ability_color(first_abl) if has_abls else C_DIM
+	var border   = C_ACCENT if selected else (abl_clr if has_abls else Color(0.20, 0.18, 0.34))
+	var suit     = _card_suit(val)
+	var large    = h >= 110
 
 	var cp = PanelContainer.new()
 	cp.custom_minimum_size = Vector2(w, h)
 	var sb = StyleBoxFlat.new()
-	sb.bg_color = C_SEL if selected else C_CARD
+	sb.bg_color = Color(0.17, 0.14, 0.30) if selected else Color(0.12, 0.10, 0.22)
 	sb.set_corner_radius_all(8)
-	sb.border_width_left   = 2
-	sb.border_width_right  = 2
-	sb.border_width_top    = 2
-	sb.border_width_bottom = 2
-	sb.border_color = C_ACCENT if selected else (border if not abls.is_empty() else Color(0.20, 0.20, 0.34))
-	if selected:
-		sb.border_width_left   = 3
-		sb.border_width_right  = 3
-		sb.border_width_top    = 3
-		sb.border_width_bottom = 3
-	sb.shadow_color  = Color(0, 0, 0, 0.55)
-	sb.shadow_size   = 5
+	var bw = 3 if selected else 2
+	sb.border_width_left   = bw; sb.border_width_right  = bw
+	sb.border_width_top    = bw; sb.border_width_bottom = bw
+	sb.border_color  = border
+	sb.shadow_color  = Color(0, 0, 0, 0.65)
+	sb.shadow_size   = 6
 	sb.shadow_offset = Vector2(0, 3)
-	sb.set_content_margin_all(6)
+	sb.set_content_margin_all(0)
 	cp.add_theme_stylebox_override("panel", sb)
 	parent.add_child(cp)
 
+	var mc = MarginContainer.new()
+	mc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var pad = 5 if large else 4
+	mc.add_theme_constant_override("margin_left",   pad)
+	mc.add_theme_constant_override("margin_right",  pad)
+	mc.add_theme_constant_override("margin_top",    pad)
+	mc.add_theme_constant_override("margin_bottom", pad)
+	cp.add_child(mc)
+
 	var col = VBoxContainer.new()
-	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.size_flags_vertical   = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 2)
-	cp.add_child(col)
+	col.add_theme_constant_override("separation", 0)
+	mc.add_child(col)
 
-	# value
+	# Corner pip row: value (left) + suit (right)
+	var top_row = HBoxContainer.new()
+	top_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_child(top_row)
+
+	var corner_val = Label.new()
+	corner_val.text = str(val)
+	corner_val.add_theme_font_size_override("font_size", 10 if large else 8)
+	corner_val.add_theme_color_override("font_color", C_TEXT)
+	top_row.add_child(corner_val)
+
+	var spc = Control.new()
+	spc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_row.add_child(spc)
+
+	var corner_suit = Label.new()
+	corner_suit.text = suit
+	corner_suit.add_theme_font_size_override("font_size", 10 if large else 8)
+	corner_suit.add_theme_color_override("font_color", abl_clr)
+	top_row.add_child(corner_suit)
+
+	# Center art area
+	var center = VBoxContainer.new()
+	center.size_flags_vertical   = Control.SIZE_EXPAND_FILL
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.alignment = BoxContainer.ALIGNMENT_CENTER
+	center.add_theme_constant_override("separation", 1)
+	col.add_child(center)
+
+	var deco = Label.new()
+	deco.text = suit
+	deco.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	deco.add_theme_font_size_override("font_size", 18 if large else 12)
+	deco.add_theme_color_override("font_color", abl_clr)
+	deco.modulate.a = 0.30
+	center.add_child(deco)
+
 	var val_lbl = Label.new()
-	val_lbl.text = str(card["value"])
+	val_lbl.text = str(val)
 	val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	val_lbl.add_theme_font_size_override("font_size", 36 if h >= 110 else 22)
+	val_lbl.add_theme_font_size_override("font_size", 36 if large else 22)
 	val_lbl.add_theme_color_override("font_color", C_TEXT)
-	val_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(val_lbl)
+	center.add_child(val_lbl)
 
-	# ability labels (all of them)
-	for abl in abls:
-		var al = Label.new()
-		al.text = _ability_short(abl)
-		al.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		al.add_theme_font_size_override("font_size", 8)
-		al.add_theme_color_override("font_color", ability_color(abl))
-		al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		col.add_child(al)
-
-	# weight badge
 	var wt = card.get("weight", 0)
 	if wt != 0:
 		var wl = Label.new()
@@ -428,16 +465,40 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 		wl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		wl.add_theme_font_size_override("font_size", 8)
 		wl.add_theme_color_override("font_color", C_WIN if wt > 0 else C_LOSE)
-		col.add_child(wl)
+		center.add_child(wl)
 
-	# flip probability
 	if prob >= 0:
 		var pl = Label.new()
 		pl.text = str(prob) + "%"
 		pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		pl.add_theme_font_size_override("font_size", 8)
 		pl.add_theme_color_override("font_color", C_DIM)
-		col.add_child(pl)
+		center.add_child(pl)
+
+	# Ability strip at bottom (divider + labels)
+	if has_abls:
+		var div = ColorRect.new()
+		div.custom_minimum_size = Vector2(0, 1)
+		div.color = abl_clr.darkened(0.35)
+		col.add_child(div)
+
+		var abl_mc = MarginContainer.new()
+		abl_mc.add_theme_constant_override("margin_top",    2)
+		abl_mc.add_theme_constant_override("margin_bottom", 1)
+		col.add_child(abl_mc)
+
+		var abl_col = VBoxContainer.new()
+		abl_col.add_theme_constant_override("separation", 1)
+		abl_mc.add_child(abl_col)
+
+		for abl in abls:
+			var al = Label.new()
+			al.text = _ability_short(abl)
+			al.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			al.add_theme_font_size_override("font_size", 8)
+			al.add_theme_color_override("font_color", ability_color(abl))
+			al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			abl_col.add_child(al)
 
 	return cp
 
@@ -883,7 +944,9 @@ func run_battle() -> void:
 
 # ── The Hush: pre-battle dramatic pause ───────────────────────────────────────
 func _do_hush(n_left: int, n_right: int) -> void:
-	for c in flip_display.get_children(): c.queue_free()
+	for c in flip_display.get_children():
+		flip_display.remove_child(c)
+		c.queue_free()
 
 	arena_status_label.text = "— The Hush —"
 	arena_status_label.add_theme_color_override("font_color", C_ACCENT)
@@ -924,7 +987,9 @@ func _do_hush(n_left: int, n_right: int) -> void:
 	var tw_out = create_tween()
 	tw_out.tween_property(hrow, "modulate:a", 0.0, 0.25)
 	await tw_out.finished
-	for c in flip_display.get_children(): c.queue_free()
+	for c in flip_display.get_children():
+		flip_display.remove_child(c)
+		c.queue_free()
 	arena_status_label.text = ""
 	arena_status_label.add_theme_color_override("font_color", C_DIM)
 
@@ -933,28 +998,67 @@ func _hush_card(parent: Control) -> PanelContainer:
 	cp.custom_minimum_size = Vector2(46, 62)
 	var sb = StyleBoxFlat.new()
 	sb.bg_color = Color(0.10, 0.08, 0.20)
-	sb.set_corner_radius_all(6)
+	sb.set_corner_radius_all(8)
 	sb.border_width_left   = 2; sb.border_width_right  = 2
 	sb.border_width_top    = 2; sb.border_width_bottom = 2
-	sb.border_color = Color(0.32, 0.22, 0.58)
-	sb.shadow_color = Color(0, 0, 0, 0.5); sb.shadow_size = 4
-	sb.set_content_margin_all(4)
+	sb.border_color = Color(0.38, 0.26, 0.65)
+	sb.shadow_color = Color(0, 0, 0, 0.55); sb.shadow_size = 5
+	sb.shadow_offset = Vector2(0, 2)
+	sb.set_content_margin_all(0)
 	cp.add_theme_stylebox_override("panel", sb)
 	parent.add_child(cp)
-	var l = Label.new()
-	l.text = "?"
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
-	l.add_theme_font_size_override("font_size", 18)
-	l.add_theme_color_override("font_color", Color(0.30, 0.22, 0.52))
-	l.set_anchors_preset(Control.PRESET_FULL_RECT)
-	cp.add_child(l)
+
+	var mc = MarginContainer.new()
+	mc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	mc.add_theme_constant_override("margin_left",   4)
+	mc.add_theme_constant_override("margin_right",  4)
+	mc.add_theme_constant_override("margin_top",    4)
+	mc.add_theme_constant_override("margin_bottom", 4)
+	cp.add_child(mc)
+
+	var col = VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.size_flags_vertical   = Control.SIZE_EXPAND_FILL
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	mc.add_child(col)
+
+	# Top-left corner dot
+	var top_dot = Label.new()
+	top_dot.text = "◆"
+	top_dot.add_theme_font_size_override("font_size", 7)
+	top_dot.add_theme_color_override("font_color", Color(0.38, 0.26, 0.65))
+	col.add_child(top_dot)
+
+	# Center pattern
+	var center = Label.new()
+	center.text = "◆\n◆◆\n◆"
+	center.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_theme_font_size_override("font_size", 10)
+	center.add_theme_color_override("font_color", Color(0.30, 0.22, 0.50))
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	center.vertical_alignment  = VERTICAL_ALIGNMENT_CENTER
+	col.add_child(center)
+
+	# Bottom-right corner dot
+	var bot_row = HBoxContainer.new()
+	bot_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_child(bot_row)
+	var spc = Control.new(); spc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bot_row.add_child(spc)
+	var bot_dot = Label.new()
+	bot_dot.text = "◆"
+	bot_dot.add_theme_font_size_override("font_size", 7)
+	bot_dot.add_theme_color_override("font_color", Color(0.38, 0.26, 0.65))
+	bot_row.add_child(bot_dot)
+
 	return cp
 
 # ── Reveal Window: show cards that didn't flip ────────────────────────────────
 func _show_reveal_window(left_unflipped: Array, right_unflipped: Array) -> void:
 	if left_unflipped.is_empty() and right_unflipped.is_empty(): return
-	for c in flip_display.get_children(): c.queue_free()
+	for c in flip_display.get_children():
+		flip_display.remove_child(c)
+		c.queue_free()
 
 	arena_status_label.text = "Cards that stayed home:"
 	arena_status_label.add_theme_color_override("font_color", C_DIM)
@@ -990,7 +1094,9 @@ func _show_reveal_window(left_unflipped: Array, right_unflipped: Array) -> void:
 	var tw_out = create_tween()
 	tw_out.tween_property(col, "modulate:a", 0.0, 0.3)
 	await tw_out.finished
-	for c in flip_display.get_children(): c.queue_free()
+	for c in flip_display.get_children():
+		flip_display.remove_child(c)
+		c.queue_free()
 	arena_status_label.text = ""
 
 # ── battle animations ──────────────────────────────────────────────────────────
@@ -1035,7 +1141,9 @@ func _animate_flip(flip: Dictionary) -> void:
 		await tw1.finished
 
 	# Replace with revealed cards at scale 0, then unfold
-	for c in flip_display.get_children(): c.queue_free()
+	for c in flip_display.get_children():
+		flip_display.remove_child(c)
+		c.queue_free()
 	var lc = C_WIN if flip["winner"] == "left" else (C_TIE if flip["winner"] == "tie" else C_LOSE)
 	var rc = C_WIN if flip["winner"] == "right" else (C_TIE if flip["winner"] == "tie" else C_LOSE)
 
@@ -1069,7 +1177,9 @@ func _animate_flip(flip: Dictionary) -> void:
 	await get_tree().create_timer(0.6).timeout
 
 func _show_face_down() -> void:
-	for c in flip_display.get_children(): c.queue_free()
+	for c in flip_display.get_children():
+		flip_display.remove_child(c)
+		c.queue_free()
 	_face_down_card(flip_display)
 	_lbl(flip_display, "vs", C_DIM).add_theme_font_size_override("font_size", 18)
 	_face_down_card(flip_display)
