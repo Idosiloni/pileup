@@ -9,6 +9,7 @@ func effective_weight(card: Dictionary) -> int:
 	var abls = card.get("abilities", [])
 	if abls.has("spotlight"):  base += 40
 	if abls.has("stage_hog"):  base += 90
+	if abls.has("wallflower"): base -= 50
 	return max(MIN_WEIGHT, base)
 
 func weighted_sample(pool: Array, count: int) -> Array:

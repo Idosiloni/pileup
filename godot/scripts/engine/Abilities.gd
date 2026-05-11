@@ -29,8 +29,11 @@ const ABILITIES = {
 	# ── Win-conditional (5g) — available round 2+ ─────────────────────────────
 	"bounty":      {"id": "bounty",      "label": "Bounty",      "description": "Win by 2+: +2g",           "trigger": "on_win",  "rarity": "uncommon", "cost": 5},
 	# ── Positional (3-4g) ─────────────────────────────────────────────────────
-	"first_light": {"id": "first_light", "label": "First Light", "description": "Always flips first if drawn", "trigger": "passive", "rarity": "common",   "cost": 3},
-	"grand_finale":{"id": "grand_finale","label": "Grand Finale","description": "Always flips last if drawn",  "trigger": "passive", "rarity": "uncommon", "cost": 4},
+	"first_light":  {"id": "first_light",  "label": "First Light",  "description": "Always flips first if drawn",                  "trigger": "passive",  "rarity": "common",   "cost": 3},
+	"grand_finale": {"id": "grand_finale", "label": "Grand Finale", "description": "Always flips last if drawn",                   "trigger": "passive",  "rarity": "uncommon", "cost": 4},
+	# ── Probability-shift with bonus (4-6g) ───────────────────────────────────
+	"wallflower":   {"id": "wallflower",   "label": "Wallflower",   "description": "-50 flip weight, but +3 on reveal",            "trigger": "passive",  "rarity": "uncommon", "cost": 4},
+	"reaper":       {"id": "reaper",       "label": "Reaper",       "description": "Win by 5+: foe's next card -3",                "trigger": "on_win",   "rarity": "rare",     "cost": 6},
 }
 
 # ── reveal events ─────────────────────────────────────────────────────────────
@@ -38,10 +41,11 @@ const ABILITIES = {
 func on_reveal_events(abilities: Array) -> Array:
 	var events = []
 	for abl in abilities:
-		if abl == "blaze":   events.append({"ability": abl, "delta": 2,  "target": "self"})
-		if abl == "echo":    events.append({"ability": abl, "delta": 3,  "target": "self"})
-		if abl == "eclipse": events.append({"ability": abl, "delta": 5,  "target": "self"})
-		if abl == "bully":   events.append({"ability": abl, "delta": -1, "target": "opponent"})
+		if abl == "blaze":      events.append({"ability": abl, "delta": 2,  "target": "self"})
+		if abl == "echo":       events.append({"ability": abl, "delta": 3,  "target": "self"})
+		if abl == "eclipse":    events.append({"ability": abl, "delta": 5,  "target": "self"})
+		if abl == "bully":      events.append({"ability": abl, "delta": -1, "target": "opponent"})
+		if abl == "wallflower": events.append({"ability": abl, "delta": 3,  "target": "self"})
 	return events
 
 func on_reveal_bonus(abilities: Array) -> int:
@@ -54,7 +58,7 @@ func on_reveal_bonus(abilities: Array) -> int:
 # ── post-flip pending events ───────────────────────────────────────────────────
 # Returns events that affect the NEXT flip's effective values.
 # "side" = which side's next card is affected; "delta" = pending amount.
-func post_flip_events(winner: String, left_abls: Array, right_abls: Array) -> Array:
+func post_flip_events(winner: String, left_abls: Array, right_abls: Array, margin: int = 0) -> Array:
 	var events = []
 	if winner == "left":
 		for abl in left_abls:
@@ -63,6 +67,8 @@ func post_flip_events(winner: String, left_abls: Array, right_abls: Array) -> Ar
 			if abl == "shield":
 				events.append({"side": "right", "ability": abl, "trigger": "on_win",  "delta": -2, "next": true})
 			if abl == "storm":
+				events.append({"side": "right", "ability": abl, "trigger": "on_win",  "delta": -3, "next": true})
+			if abl == "reaper" and margin >= 5:
 				events.append({"side": "right", "ability": abl, "trigger": "on_win",  "delta": -3, "next": true})
 		for abl in right_abls:
 			if abl == "spite":

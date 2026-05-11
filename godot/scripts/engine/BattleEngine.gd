@@ -182,7 +182,7 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 			right_score += 1
 
 		# ── Post-flip pending events (valor, spite, martyr, shield, storm) ──
-		for pev in Abilities.post_flip_events(flip["winner"], left_abls, right_abls):
+		for pev in Abilities.post_flip_events(flip["winner"], left_abls, right_abls, flip["delta"]):
 			if pev["side"] == "left":  left_pending  += pev["delta"]
 			else:                      right_pending += pev["delta"]
 			events.append(pev)
