@@ -35,6 +35,8 @@ const ABILITIES = {
 	"wallflower":   {"id": "wallflower",   "label": "Wallflower",   "description": "-50 flip weight, but +3 on reveal",            "trigger": "passive",  "rarity": "uncommon", "cost": 4},
 	"reaper":       {"id": "reaper",       "label": "Reaper",       "description": "Win by 5+: foe's next card -3",                "trigger": "on_win",   "rarity": "rare",     "cost": 6},
 	"rage_build":   {"id": "rage_build",   "label": "Rage Build",   "description": "+1 per prior loss this battle",               "trigger": "on_reveal","rarity": "rare",     "cost": 6},
+	"bitter_end":   {"id": "bitter_end",   "label": "Bitter End",   "description": "Lose by 8+: foe's next card -4",             "trigger": "on_loss",  "rarity": "uncommon", "cost": 4},
+	"last_laugh":   {"id": "last_laugh",   "label": "Last Laugh",   "description": "Lose on final flip: +5g",                    "trigger": "on_loss",  "rarity": "uncommon", "cost": 4},
 }
 
 # ── reveal events ─────────────────────────────────────────────────────────────
@@ -89,6 +91,8 @@ func post_flip_events(winner: String, left_abls: Array, right_abls: Array, margi
 				events.append({"side": "left",  "ability": abl, "trigger": "on_loss", "delta": -1, "next": true})
 			if abl == "martyr":
 				events.append({"side": "left",  "ability": abl, "trigger": "on_loss", "delta":  2, "next": true})
+			if abl == "bitter_end" and margin >= 8:
+				events.append({"side": "right", "ability": abl, "trigger": "on_loss", "delta": -4, "next": true})
 	elif winner == "tie":
 		for abl in left_abls:
 			if abl == "resilience":
@@ -98,7 +102,7 @@ func post_flip_events(winner: String, left_abls: Array, right_abls: Array, margi
 				events.append({"side": "right", "ability": abl, "trigger": "on_tie", "delta": 3, "next": true})
 	return events
 
-func post_flip_gold_events(winner: String, left_abls: Array, right_abls: Array, margin: int) -> Array:
+func post_flip_gold_events(winner: String, left_abls: Array, right_abls: Array, margin: int, is_last_flip: bool = false) -> Array:
 	var events = []
 	if winner == "right" and left_abls.has("comeback") and margin >= 3:
 		events.append({"side": "left",  "ability": "comeback",   "trigger": "on_loss", "delta": 2, "currency": "gold"})
@@ -120,6 +124,10 @@ func post_flip_gold_events(winner: String, left_abls: Array, right_abls: Array, 
 		events.append({"side": "left",  "ability": "phoenix",    "trigger": "on_loss", "delta": 1, "currency": "gold"})
 	if winner == "left"  and right_abls.has("phoenix"):
 		events.append({"side": "right", "ability": "phoenix",    "trigger": "on_loss", "delta": 1, "currency": "gold"})
+	if winner != "left"  and left_abls.has("last_laugh") and is_last_flip:
+		events.append({"side": "left",  "ability": "last_laugh", "trigger": "on_loss", "delta": 5, "currency": "gold"})
+	if winner != "right" and right_abls.has("last_laugh") and is_last_flip:
+		events.append({"side": "right", "ability": "last_laugh", "trigger": "on_loss", "delta": 5, "currency": "gold"})
 	return events
 
 # Convenience wrappers returning totals (used by RunEngine / legacy callers)

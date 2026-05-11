@@ -206,7 +206,7 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 			events.append(pev)
 
 		# ── Post-flip gold events (comeback, coin_press) ────────────────────
-		for gev in Abilities.post_flip_gold_events(flip["winner"], left_abls, right_abls, flip["delta"]):
+		for gev in Abilities.post_flip_gold_events(flip["winner"], left_abls, right_abls, flip["delta"], i == flip_count - 1):
 			if gev["side"] == "left":  left_gold_bonus  += gev["delta"]
 			else:                      right_gold_bonus += gev["delta"]
 			events.append(gev)
