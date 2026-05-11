@@ -566,7 +566,7 @@ func show_shop_phase() -> void:
 		upg_btn.text     = "Max Level"
 		upg_btn.disabled = true
 	else:
-		upg_btn.text     = "Upgrade Shop  " + str(RunEngine.SHOP_UPGRADE_COST) + "g"
+		upg_btn.text     = "Upgrade Shop  " + str(RunEngine.effective_shop_upgrade_cost(run_state)) + "g"
 		upg_btn.disabled = not RunEngine.can_upgrade_shop(run_state)
 	render_shop_power_ups()
 	render_joker_shop()
@@ -1419,6 +1419,7 @@ func _on_upgrade_shop() -> void:
 		upg_btn.text     = "Max Level"
 		upg_btn.disabled = true
 	else:
+		upg_btn.text     = "Upgrade Shop  " + str(RunEngine.effective_shop_upgrade_cost(run_state)) + "g"
 		upg_btn.disabled = not RunEngine.can_upgrade_shop(run_state)
 	render_shop_power_ups()
 	render_joker_shop()

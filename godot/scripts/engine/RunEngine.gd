@@ -15,6 +15,8 @@ const PERKS = {
 	"veteran":     {"id": "veteran",     "name": "Veteran",     "description": "Your highest starter card has Blaze."},
 	"scholar":     {"id": "scholar",     "name": "Scholar",     "description": "Power-ups cost 1g less (min 1g)."},
 	"tactician":   {"id": "tactician",   "name": "Tactician",   "description": "Rerolling the shop is free."},
+	"aggressor":   {"id": "aggressor",   "name": "Aggressor",   "description": "Your three highest starter cards: +1 value each."},
+	"patron":      {"id": "patron",      "name": "Patron",      "description": "Shop upgrades cost 2g less."},
 }
 
 func make_run() -> Dictionary:
@@ -48,6 +50,16 @@ func apply_starting_perk(run: Dictionary, perk_id: String) -> Dictionary:
 		nc["abilities"] = abls
 		cards[best_idx] = nc
 		new_run["player_pile"]["cards"] = cards
+	elif perk_id == "aggressor":
+		var cards = new_run["player_pile"]["cards"].duplicate(true)
+		var sorted_idxs = range(cards.size())
+		sorted_idxs.sort_custom(func(a, b): return cards[a]["value"] > cards[b]["value"])
+		for rank in range(mini(3, sorted_idxs.size())):
+			var idx = sorted_idxs[rank]
+			var nc = cards[idx].duplicate(true)
+			nc["value"] = nc["value"] + 1
+			cards[idx] = nc
+		new_run["player_pile"]["cards"] = cards
 	return new_run
 
 func effective_pile_cap(run: Dictionary) -> int:
@@ -72,8 +84,11 @@ func can_buy_joker(run: Dictionary, joker_id: String) -> bool:
 	if run.get("jokers", []).has(joker_id): return false
 	return run["gold"] >= Jokers.JOKERS[joker_id]["cost"]
 
+func effective_shop_upgrade_cost(run: Dictionary) -> int:
+	return maxi(1, SHOP_UPGRADE_COST - (2 if run.get("perk") == "patron" else 0))
+
 func can_upgrade_shop(run: Dictionary) -> bool:
-	return run.get("shop_level", 1) < MAX_SHOP_LEVEL and run["gold"] >= SHOP_UPGRADE_COST
+	return run.get("shop_level", 1) < MAX_SHOP_LEVEL and run["gold"] >= effective_shop_upgrade_cost(run)
 
 func sell_card(run: Dictionary, card_id: String) -> Dictionary:
 	if run.get("sells_used_this_shop", 0) >= 1: return run
@@ -139,7 +154,7 @@ func buy_joker(run: Dictionary, joker_id: String) -> Dictionary:
 func upgrade_shop(run: Dictionary) -> Dictionary:
 	if not can_upgrade_shop(run): return run
 	var new_run = run.duplicate(true)
-	new_run["gold"] -= SHOP_UPGRADE_COST
+	new_run["gold"] -= effective_shop_upgrade_cost(run)
 	new_run["shop_level"] = run.get("shop_level", 1) + 1
 	return new_run
 

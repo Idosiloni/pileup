@@ -23,14 +23,18 @@ func make_random_pile(owner_id: String = "anon") -> Dictionary:
 	for _i in range(10): suits.append("red")
 	for _i in range(10): suits.append("black")
 	suits.shuffle()
-	var ability_pool = ["valor", "spite", "blaze", "martyr", "spotlight"]
+	var ability_pool = [
+		"valor", "spite", "blaze", "martyr", "spotlight",
+		"pierce", "echo", "shield", "avenger", "bully",
+		"coin_press", "comeback", "phoenix", "draw_power", "resilience"
+	]
 	for i in range(20):
 		var r       = randf()
 		var ability = ""
 		var weight  = 0
-		if r < 0.20:
+		if r < 0.25:
 			ability = ability_pool[randi() % ability_pool.size()]
-		elif r < 0.35:
+		elif r < 0.38:
 			weight = 50
 		elif r < 0.50:
 			weight = -50
