@@ -45,12 +45,14 @@ const JOKERS = {
 	"frugal":          {"id": "frugal",          "name": "Frugal",          "description": "25% of unspent gold carries to next shop.",            "cost": 7, "rarity": "rare"},
 	"weighted_dice":   {"id": "weighted_dice",   "name": "Weighted Dice",   "description": "Your 3 highest cards: +25 flip weight each.",          "cost": 8, "rarity": "rare"},
 	"survivor":        {"id": "survivor",        "name": "Survivor",        "description": "Per HP missing: +1 to your highest flipped card.",      "cost": 8, "rarity": "rare"},
+	"slim_pile":       {"id": "slim_pile",       "name": "Slim Pile",       "description": "Pile cap reduced to 8, but all cards +2 value.",          "cost": 8, "rarity": "rare"},
+	"the_architect":   {"id": "the_architect",   "name": "The Architect",   "description": "You can hold 3 Jokers instead of 2.",                     "cost": 8, "rarity": "rare"},
 }
 
 const JOKER_POOL_BY_RARITY = {
 	"common":   ["fortune", "ironclad", "tiebreaker", "odd_job", "even_steven", "scrapper", "last_stand", "compound_card", "mud_pit", "symmetry", "spotlight_effect", "coin_pair"],
 	"uncommon": ["underdog", "streak", "doubler", "pyromancer", "hoarder", "balance", "opportunist", "momentum", "lowball", "rolling_stone", "asymmetry", "bookend"],
-	"rare":     ["sniper", "gambler", "colossus", "time_warp", "chain_lightning", "speed_demon", "long_haul", "truncate", "boost", "old_soul", "frugal", "weighted_dice", "survivor"]
+	"rare":     ["sniper", "gambler", "colossus", "time_warp", "chain_lightning", "speed_demon", "long_haul", "truncate", "boost", "old_soul", "frugal", "weighted_dice", "survivor", "slim_pile", "the_architect"]
 }
 
 # ── pre-flip joker effects ────────────────────────────────────────────────────
@@ -72,6 +74,7 @@ func apply_joker_pre_flip(joker_ids: Array, left_card: Dictionary, right_card: D
 		if jid == "lowball"          and left_card["value"] <= 3:                   left_eff += 2
 		if jid == "symmetry"         and left_odd == right_odd:                     left_eff += 1
 		if jid == "asymmetry"        and left_odd != right_odd:                     left_eff += 2
+		if jid == "slim_pile":                                                      left_eff += 2
 	return {"left_eff": left_eff, "right_eff": right_eff}
 
 # ── tie overrides ─────────────────────────────────────────────────────────────
@@ -116,8 +119,14 @@ func joker_gold_bonus_on_big_win(joker_ids: Array, margin: int) -> int:
 func joker_pile_cap(joker_ids: Array) -> int:
 	var cap = -1
 	for jid in joker_ids:
-		if jid == "hoarder": cap = max(cap, 12)
+		if jid == "hoarder":   cap = max(cap, 12)
+		if jid == "slim_pile": cap = (8 if cap < 0 else min(cap, 8))
 	return cap
+
+func joker_max_jokers(joker_ids: Array) -> int:
+	for jid in joker_ids:
+		if jid == "the_architect": return 3
+	return -1
 
 func joker_flip_count(joker_ids: Array) -> int:
 	var override = -1

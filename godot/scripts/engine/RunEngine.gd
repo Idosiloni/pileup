@@ -78,9 +78,13 @@ func can_upgrade(run: Dictionary) -> bool:
 func effective_power_up_cost(run: Dictionary, base_cost: int) -> int:
 	return maxi(1, base_cost - 1) if run.get("perk") == "scholar" else base_cost
 
+func effective_max_jokers(run: Dictionary) -> int:
+	var override = Jokers.joker_max_jokers(run.get("jokers", []))
+	return override if override > 0 else MAX_JOKERS
+
 func can_buy_joker(run: Dictionary, joker_id: String) -> bool:
 	if not Jokers.JOKERS.has(joker_id): return false
-	if run.get("jokers", []).size() >= MAX_JOKERS: return false
+	if run.get("jokers", []).size() >= effective_max_jokers(run): return false
 	if run.get("jokers", []).has(joker_id): return false
 	return run["gold"] >= Jokers.JOKERS[joker_id]["cost"]
 

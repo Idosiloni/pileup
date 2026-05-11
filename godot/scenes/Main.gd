@@ -649,7 +649,7 @@ func render_joker_shop() -> void:
 		cap_lbl.text = "Upgrade shop to level 2 to unlock jokers"
 		return
 
-	var max_j = RunEngine.MAX_JOKERS
+	var max_j = RunEngine.effective_max_jokers(run_state)
 	cap_lbl.text = "Jokers full (" + str(max_j) + "/" + str(max_j) + ")" if joker_ids.size() >= max_j \
 		else str(joker_ids.size()) + " / " + str(max_j) + " jokers"
 
