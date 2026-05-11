@@ -17,10 +17,27 @@ func _add_ability_to_card(card: Dictionary, ability_id: String) -> Dictionary:
 	return nc
 
 func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
-		joker_ids: Array = []) -> Dictionary:
+		joker_ids: Array = [], player_hp: int = 25) -> Dictionary:
+
+	# ── Weighted Dice: top 3 value cards get +25 flip weight ─────────────────
+	var left_pile_for_selection = left_pile
+	if joker_ids.has("weighted_dice"):
+		var sorted_cards = left_pile["cards"].duplicate()
+		sorted_cards.sort_custom(func(a, b): return a["value"] > b["value"])
+		var top3_ids: Dictionary = {}
+		for i in range(mini(3, sorted_cards.size())):
+			top3_ids[sorted_cards[i]["id"]] = true
+		var wd_cards = []
+		for c in left_pile["cards"]:
+			if top3_ids.has(c["id"]):
+				var nc = c.duplicate(true)
+				nc["_weighted_dice"] = true
+				wd_cards.append(nc)
+			else:
+				wd_cards.append(c)
+		left_pile_for_selection = {"cards": wd_cards, "owner_id": left_pile["owner_id"]}
 
 	# ── Sniper: guarantee highest-value left card flips ──────────────────────
-	var left_pile_for_selection = left_pile
 	if joker_ids.has("sniper"):
 		var anchor_id = Jokers.sniper_anchor_id(left_pile)
 		if not anchor_id.is_empty():
@@ -52,10 +69,10 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 
 	var left_flipped: Array = Selection.select_flipped(left_pile_for_selection)
 
-	# Strip joker-added anchor markers; restore original cards from source pile
+	# Strip joker-added markers; restore original cards from source pile
 	var cleaned = []
 	for c in left_flipped:
-		if c.get("_sniper_anchor", false) or c.get("_ironclad_anchor", false):
+		if c.get("_sniper_anchor", false) or c.get("_ironclad_anchor", false) or c.get("_weighted_dice", false):
 			var orig_arr = left_pile["cards"].filter(func(o): return o["id"] == c["id"])
 			cleaned.append(orig_arr[0] if not orig_arr.is_empty() else c)
 		else:
@@ -86,6 +103,17 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 	var left_loss_count    = 0
 	var right_loss_count   = 0
 
+	# ── Survivor: HP missing → +N to the highest-value flipped card ─────────
+	var survivor_bonus    = 0
+	var survivor_card_id  = ""
+	if joker_ids.has("survivor") and player_hp < 25:
+		survivor_bonus = maxi(0, 25 - player_hp)
+		var best_val  = -1
+		for c in left_flipped:
+			if c["value"] > best_val:
+				best_val        = c["value"]
+				survivor_card_id = c["id"]
+
 	var left_flipped_ids  = {}
 	for c in left_flipped:  left_flipped_ids[c["id"]]  = true
 	var right_flipped_ids = {}
@@ -108,6 +136,11 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 		if right_pending != 0: events.append({"side": "right", "source": "pending", "delta": right_pending})
 		left_pending  = 0
 		right_pending = 0
+
+		# ── Survivor: HP-missing bonus on highest flipped card ───────────────
+		if survivor_bonus > 0 and left_card["id"] == survivor_card_id:
+			left_eff += survivor_bonus
+			events.append({"side": "left", "source": "joker", "joker_ids": ["survivor"], "delta": survivor_bonus})
 
 		# ── Avenger: +3 if previous flip was lost ────────────────────────────
 		if left_abls.has("avenger") and prev_winner == "right":

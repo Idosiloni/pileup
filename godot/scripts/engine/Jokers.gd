@@ -43,12 +43,14 @@ const JOKERS = {
 	"coin_pair":       {"id": "coin_pair",       "name": "Coin Pair",       "description": "Both flip same parity: +2g per flip.",                 "cost": 5, "rarity": "common"},
 	# ── Rare (7-8g) extra ─────────────────────────────────────────────────────
 	"frugal":          {"id": "frugal",          "name": "Frugal",          "description": "25% of unspent gold carries to next shop.",            "cost": 7, "rarity": "rare"},
+	"weighted_dice":   {"id": "weighted_dice",   "name": "Weighted Dice",   "description": "Your 3 highest cards: +25 flip weight each.",          "cost": 8, "rarity": "rare"},
+	"survivor":        {"id": "survivor",        "name": "Survivor",        "description": "Per HP missing: +1 to your highest flipped card.",      "cost": 8, "rarity": "rare"},
 }
 
 const JOKER_POOL_BY_RARITY = {
 	"common":   ["fortune", "ironclad", "tiebreaker", "odd_job", "even_steven", "scrapper", "last_stand", "compound_card", "mud_pit", "symmetry", "spotlight_effect", "coin_pair"],
 	"uncommon": ["underdog", "streak", "doubler", "pyromancer", "hoarder", "balance", "opportunist", "momentum", "lowball", "rolling_stone", "asymmetry", "bookend"],
-	"rare":     ["sniper", "gambler", "colossus", "time_warp", "chain_lightning", "speed_demon", "long_haul", "truncate", "boost", "old_soul", "frugal"]
+	"rare":     ["sniper", "gambler", "colossus", "time_warp", "chain_lightning", "speed_demon", "long_haul", "truncate", "boost", "old_soul", "frugal", "weighted_dice", "survivor"]
 }
 
 # ── pre-flip joker effects ────────────────────────────────────────────────────

@@ -876,7 +876,7 @@ func run_battle() -> void:
 	_log("You:  [" + ", ".join(left_pile["cards"].map(func(c): return str(c["value"]))) + "]")
 	_log("AI:   [" + ", ".join(right_pile["cards"].map(func(c): return str(c["value"]))) + "]")
 
-	var result      = BattleEngine.simulate_battle(left_pile, right_pile, joker_ids)
+	var result      = BattleEngine.simulate_battle(left_pile, right_pile, joker_ids, run_state["player_hp"])
 	var left_score  = 0
 	var right_score = 0
 
