@@ -1,13 +1,14 @@
 extends Node
 
-const STARTING_HP   = 25
-const STARTING_GOLD = 7
-const CARD_COST     = 3
-const SELL_COST     = 1
-const MIN_PILE_SIZE = 10
-const MAX_PILE_SIZE = 14
-const UPGRADE_COST  = 4
-const MAX_JOKERS    = 2
+const STARTING_HP       = 25
+const STARTING_GOLD     = 7
+const SELL_COST         = 1
+const MIN_PILE_SIZE     = 10
+const MAX_PILE_SIZE     = 20
+const UPGRADE_COST      = 4
+const SHOP_UPGRADE_COST = 4
+const MAX_JOKERS        = 2
+const MAX_SHOP_LEVEL    = 3
 
 const PERKS = {
 	"merchant":    {"id": "merchant",    "name": "Merchant",    "description": "Start each shop with +2g bonus."},
@@ -26,6 +27,7 @@ func make_run() -> Dictionary:
 		"jokers":              [],
 		"player_pile":         Cards.make_starter_pile("player"),
 		"phase":               "shop",
+		"shop_level":          1,
 		"sells_used_this_shop": 0
 	}
 
@@ -51,9 +53,6 @@ func effective_pile_cap(run: Dictionary) -> int:
 	var cap = Jokers.joker_pile_cap(run.get("jokers", []))
 	return cap if cap > 0 else MAX_PILE_SIZE
 
-func can_buy(run: Dictionary) -> bool:
-	return run["gold"] >= CARD_COST and run["player_pile"]["cards"].size() < effective_pile_cap(run)
-
 func can_sell(run: Dictionary, card_id: String) -> bool:
 	if run.get("sells_used_this_shop", 0) >= 1: return false
 	if run["gold"] < SELL_COST: return false
@@ -72,13 +71,8 @@ func can_buy_joker(run: Dictionary, joker_id: String) -> bool:
 	if run.get("jokers", []).has(joker_id): return false
 	return run["gold"] >= Jokers.JOKERS[joker_id]["cost"]
 
-func buy_card(run: Dictionary, card: Dictionary) -> Dictionary:
-	if run["gold"] < CARD_COST: return run
-	if run["player_pile"]["cards"].size() >= effective_pile_cap(run): return run
-	var new_run = run.duplicate(true)
-	new_run["gold"] -= CARD_COST
-	new_run["player_pile"]["cards"].append(card)
-	return new_run
+func can_upgrade_shop(run: Dictionary) -> bool:
+	return run.get("shop_level", 1) < MAX_SHOP_LEVEL and run["gold"] >= SHOP_UPGRADE_COST
 
 func sell_card(run: Dictionary, card_id: String) -> Dictionary:
 	if run.get("sells_used_this_shop", 0) >= 1: return run
@@ -107,19 +101,6 @@ func upgrade_card(run: Dictionary, card_id: String) -> Dictionary:
 	new_run["gold"] -= UPGRADE_COST
 	new_run["player_pile"]["cards"] = new_cards
 	return new_run
-
-func buy_pack(run: Dictionary, pack: Dictionary) -> Dictionary:
-	var cost = pack["cost"]
-	if run["gold"] < cost: return run
-	if run["player_pile"]["cards"].size() >= effective_pile_cap(run): return run
-	var new_card = Cards.make_card(randi_range(pack["min_val"], pack["max_val"]))
-	var new_run  = run.duplicate(true)
-	new_run["gold"] -= cost
-	new_run["player_pile"]["cards"].append(new_card)
-	return new_run
-
-func can_buy_pack(run: Dictionary, pack: Dictionary) -> bool:
-	return run["gold"] >= pack["cost"] and run["player_pile"]["cards"].size() < effective_pile_cap(run)
 
 func buy_power_up(run: Dictionary, card_id: String, ability_id: String, cost: int) -> Dictionary:
 	if run["gold"] < cost: return run
@@ -154,6 +135,13 @@ func buy_joker(run: Dictionary, joker_id: String) -> Dictionary:
 	new_run["jokers"] = new_jokers
 	return new_run
 
+func upgrade_shop(run: Dictionary) -> Dictionary:
+	if not can_upgrade_shop(run): return run
+	var new_run = run.duplicate(true)
+	new_run["gold"] -= SHOP_UPGRADE_COST
+	new_run["shop_level"] = run.get("shop_level", 1) + 1
+	return new_run
+
 func apply_battle_result(run: Dictionary, result: Dictionary) -> Dictionary:
 	var damage        = mini(3, result.get("margin", 0))
 	var new_player_hp = run["player_hp"]
@@ -169,5 +157,6 @@ func apply_battle_result(run: Dictionary, result: Dictionary) -> Dictionary:
 	new_run["player_hp"]            = new_player_hp
 	new_run["ai_hp"]                = new_ai_hp
 	new_run["phase"]                = phase
+	new_run["shop_level"]           = run.get("shop_level", 1)
 	new_run["sells_used_this_shop"] = 0
 	return new_run
