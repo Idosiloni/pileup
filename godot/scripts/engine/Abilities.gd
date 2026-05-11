@@ -8,6 +8,7 @@ const ABILITIES = {
 	"blaze":     {"id": "blaze",     "label": "Blaze",     "description": "On Reveal: +2",          "trigger": "on_reveal","rarity": "common",   "cost": 3},
 	"martyr":    {"id": "martyr",    "label": "Martyr",    "description": "On Loss: your next +2",  "trigger": "on_loss",  "rarity": "common",   "cost": 3},
 	"spotlight": {"id": "spotlight", "label": "Spotlight", "description": "+40 flip weight",        "trigger": "passive",  "rarity": "common",   "cost": 3},
+	"bully":     {"id": "bully",     "label": "Bully",     "description": "On Reveal: foe -1",      "trigger": "on_reveal","rarity": "common",   "cost": 3},
 	# ── Uncommon (4-5g) — available round 2+ ─────────────────────────────────
 	"pierce":    {"id": "pierce",    "label": "Pierce",    "description": "On Tie: count as win",        "trigger": "on_tie",   "rarity": "uncommon", "cost": 4},
 	"echo":      {"id": "echo",      "label": "Echo",      "description": "On Reveal: +3",               "trigger": "on_reveal","rarity": "uncommon", "cost": 4},
@@ -17,15 +18,19 @@ const ABILITIES = {
 	"avenger":   {"id": "avenger",   "label": "Avenger",   "description": "If prev flip lost: +3",       "trigger": "on_reveal","rarity": "uncommon", "cost": 5},
 	"phoenix":   {"id": "phoenix",   "label": "Phoenix",   "description": "On Loss: +1g",                "trigger": "on_loss",  "rarity": "uncommon", "cost": 4},
 	# ── Rare (6-7g) — available round 3+ ─────────────────────────────────────
-	"anchor":    {"id": "anchor",    "label": "Anchor",    "description": "Passive: always flips",  "trigger": "passive",  "rarity": "rare",     "cost": 6},
-	"stage_hog": {"id": "stage_hog", "label": "Stage Hog","description": "+90 flip weight",        "trigger": "passive",  "rarity": "rare",     "cost": 6},
-	"eclipse":   {"id": "eclipse",   "label": "Eclipse",   "description": "On Reveal: +5",          "trigger": "on_reveal","rarity": "rare",     "cost": 7},
-	"storm":     {"id": "storm",     "label": "Storm",     "description": "On Win: foe next -3",    "trigger": "on_win",   "rarity": "rare",     "cost": 7},
+	"anchor":       {"id": "anchor",       "label": "Anchor",       "description": "Passive: always flips",              "trigger": "passive",  "rarity": "rare", "cost": 6},
+	"stage_hog":    {"id": "stage_hog",    "label": "Stage Hog",   "description": "+90 flip weight",                   "trigger": "passive",  "rarity": "rare", "cost": 6},
+	"eclipse":      {"id": "eclipse",      "label": "Eclipse",      "description": "On Reveal: +5",                     "trigger": "on_reveal","rarity": "rare", "cost": 7},
+	"storm":        {"id": "storm",        "label": "Storm",        "description": "On Win: foe next -3",               "trigger": "on_win",   "rarity": "rare", "cost": 7},
+	"late_bloomer": {"id": "late_bloomer", "label": "Late Bloomer", "description": "+1 value after each battle (max 5)", "trigger": "passive",  "rarity": "rare", "cost": 5},
 	# ── Tie-conditional (3-4g) — available round 1+ ───────────────────────────
-	"draw_power":  {"id": "draw_power",  "label": "Draw Power",  "description": "On Tie: +1g",         "trigger": "on_tie",  "rarity": "common",   "cost": 3},
-	"resilience":  {"id": "resilience",  "label": "Resilience",  "description": "On Tie: next ally +3", "trigger": "on_tie",  "rarity": "uncommon", "cost": 4},
+	"draw_power":  {"id": "draw_power",  "label": "Draw Power",  "description": "On Tie: +1g",             "trigger": "on_tie",  "rarity": "common",   "cost": 3},
+	"resilience":  {"id": "resilience",  "label": "Resilience",  "description": "On Tie: next ally +3",     "trigger": "on_tie",  "rarity": "uncommon", "cost": 4},
 	# ── Win-conditional (5g) — available round 2+ ─────────────────────────────
-	"bounty":      {"id": "bounty",      "label": "Bounty",      "description": "Win by 2+: +2g",      "trigger": "on_win",  "rarity": "uncommon", "cost": 5},
+	"bounty":      {"id": "bounty",      "label": "Bounty",      "description": "Win by 2+: +2g",           "trigger": "on_win",  "rarity": "uncommon", "cost": 5},
+	# ── Positional (3-4g) ─────────────────────────────────────────────────────
+	"first_light": {"id": "first_light", "label": "First Light", "description": "Always flips first if drawn", "trigger": "passive", "rarity": "common",   "cost": 3},
+	"grand_finale":{"id": "grand_finale","label": "Grand Finale","description": "Always flips last if drawn",  "trigger": "passive", "rarity": "uncommon", "cost": 4},
 }
 
 # ── reveal events ─────────────────────────────────────────────────────────────
@@ -33,15 +38,17 @@ const ABILITIES = {
 func on_reveal_events(abilities: Array) -> Array:
 	var events = []
 	for abl in abilities:
-		if abl == "blaze":   events.append({"ability": abl, "delta": 2})
-		if abl == "echo":    events.append({"ability": abl, "delta": 3})
-		if abl == "eclipse": events.append({"ability": abl, "delta": 5})
+		if abl == "blaze":   events.append({"ability": abl, "delta": 2,  "target": "self"})
+		if abl == "echo":    events.append({"ability": abl, "delta": 3,  "target": "self"})
+		if abl == "eclipse": events.append({"ability": abl, "delta": 5,  "target": "self"})
+		if abl == "bully":   events.append({"ability": abl, "delta": -1, "target": "opponent"})
 	return events
 
 func on_reveal_bonus(abilities: Array) -> int:
 	var total = 0
 	for ev in on_reveal_events(abilities):
-		total += ev["delta"]
+		if ev.get("target", "self") == "self":
+			total += ev["delta"]
 	return total
 
 # ── post-flip pending events ───────────────────────────────────────────────────

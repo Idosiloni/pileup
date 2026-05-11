@@ -72,15 +72,17 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 		elif flip_count_override > flip_count: # time_warp expands (capped by available)
 			flip_count = mini(flip_count_override, mini(left_flipped.size(), right_flipped.size()))
 
-	var flips            = []
-	var left_score       = 0
-	var right_score      = 0
-	var left_pending     = 0
-	var right_pending    = 0
-	var left_gold_bonus  = 0
-	var right_gold_bonus = 0
-	var streak_count     = 0
-	var prev_winner      = ""
+	var flips              = []
+	var left_score         = 0
+	var right_score        = 0
+	var left_pending       = 0
+	var right_pending      = 0
+	var left_gold_bonus    = 0
+	var right_gold_bonus   = 0
+	var streak_count       = 0
+	var prev_winner        = ""
+	var max_left_streak    = 0
+	var cur_left_streak    = 0
 
 	var left_flipped_ids  = {}
 	for c in left_flipped:  left_flipped_ids[c["id"]]  = true
@@ -115,11 +117,25 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 
 		# ── On Reveal ────────────────────────────────────────────────────────
 		for rev_ev in Abilities.on_reveal_events(left_abls):
-			left_eff += rev_ev["delta"]
-			events.append({"side": "left",  "ability": rev_ev["ability"], "trigger": "on_reveal", "delta": rev_ev["delta"]})
+			if rev_ev.get("target", "self") == "opponent":
+				right_eff += rev_ev["delta"]
+				events.append({"side": "right", "ability": rev_ev["ability"], "trigger": "on_reveal", "delta": rev_ev["delta"], "source": "left"})
+			else:
+				left_eff += rev_ev["delta"]
+				events.append({"side": "left",  "ability": rev_ev["ability"], "trigger": "on_reveal", "delta": rev_ev["delta"]})
 		for rev_ev in Abilities.on_reveal_events(right_abls):
-			right_eff += rev_ev["delta"]
-			events.append({"side": "right", "ability": rev_ev["ability"], "trigger": "on_reveal", "delta": rev_ev["delta"]})
+			if rev_ev.get("target", "self") == "opponent":
+				left_eff += rev_ev["delta"]
+				events.append({"side": "left",  "ability": rev_ev["ability"], "trigger": "on_reveal", "delta": rev_ev["delta"], "source": "right"})
+			else:
+				right_eff += rev_ev["delta"]
+				events.append({"side": "right", "ability": rev_ev["ability"], "trigger": "on_reveal", "delta": rev_ev["delta"]})
+
+		# ── Last Stand: final flip +3 to both ────────────────────────────────
+		if joker_ids.has("last_stand") and i == flip_count - 1:
+			left_eff  += 3
+			right_eff += 3
+			events.append({"source": "joker", "joker_ids": ["last_stand"], "note": "final flip +3 each", "left_eff": left_eff, "right_eff": right_eff})
 
 		# ── Joker pre-flip ────────────────────────────────────────────────────
 		var joker_eff = Jokers.apply_joker_pre_flip(joker_ids, left_card, right_card, left_eff, right_eff, streak_count)
@@ -147,10 +163,13 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 			flip = joker_flip
 
 		if flip["winner"] == "left":
-			left_score   += 1
-			streak_count += 1
+			left_score       += 1
+			streak_count     += 1
+			cur_left_streak  += 1
+			max_left_streak   = maxi(max_left_streak, cur_left_streak)
 		else:
-			streak_count = 0
+			streak_count    = 0
+			cur_left_streak = 0
 		if flip["winner"] == "right":
 			right_score += 1
 
@@ -192,18 +211,24 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 	elif winner == "tie":
 		joker_gold_bonus = Jokers.joker_gold_bonus_on_tie(joker_ids)
 
+	# Chain Lightning: 3 consecutive left-wins → +2 extra HP damage
+	var chain_lightning_bonus = 0
+	if winner == "left" and joker_ids.has("chain_lightning") and max_left_streak >= 3:
+		chain_lightning_bonus = 2
+
 	return {
-		"left_pile":        left_pile,
-		"right_pile":       right_pile,
-		"left_flipped":     left_flipped,
-		"right_flipped":    right_flipped,
-		"left_unflipped":   left_unflipped,
-		"right_unflipped":  right_unflipped,
-		"flips":            flips,
-		"left_score":       left_score,
-		"right_score":      right_score,
-		"winner":           winner,
-		"margin":           margin,
-		"left_gold_bonus":  left_gold_bonus + joker_gold_bonus,
-		"right_gold_bonus": right_gold_bonus
+		"left_pile":              left_pile,
+		"right_pile":             right_pile,
+		"left_flipped":           left_flipped,
+		"right_flipped":          right_flipped,
+		"left_unflipped":         left_unflipped,
+		"right_unflipped":        right_unflipped,
+		"flips":                  flips,
+		"left_score":             left_score,
+		"right_score":            right_score,
+		"winner":                 winner,
+		"margin":                 margin,
+		"left_gold_bonus":        left_gold_bonus + joker_gold_bonus,
+		"right_gold_bonus":       right_gold_bonus,
+		"chain_lightning_bonus":  chain_lightning_bonus
 	}

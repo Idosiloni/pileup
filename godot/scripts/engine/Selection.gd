@@ -54,9 +54,9 @@ func select_flipped(pile: Dictionary) -> Array:
 	var anchored   = anchor_cards.slice(0, FLIP_COUNT)
 	var slots_left = FLIP_COUNT - anchored.size()
 
-	var first_cards   = normal_cards.filter(func(c): return c.get("position") == "first")
-	var last_cards    = normal_cards.filter(func(c): return c.get("position") == "last")
-	var neutral_cards = normal_cards.filter(func(c): return c.get("position", "") == "")
+	var first_cards   = normal_cards.filter(func(c): return c.get("position") == "first" or c.get("abilities", []).has("first_light"))
+	var last_cards    = normal_cards.filter(func(c): return c.get("position") == "last"  or c.get("abilities", []).has("grand_finale"))
+	var neutral_cards = normal_cards.filter(func(c): return c.get("position", "") == "" and not c.get("abilities", []).has("first_light") and not c.get("abilities", []).has("grand_finale"))
 
 	var res_first = weighted_sample(first_cards,   min(first_cards.size(),   slots_left))
 	var rem1      = slots_left - res_first.size()

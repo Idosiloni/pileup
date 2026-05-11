@@ -81,9 +81,13 @@ func ability_color(abl: String) -> Color:
 		"storm":      return Color(0.45, 0.85, 1.00)
 		"avenger":    return Color(0.95, 0.25, 0.40)
 		"phoenix":    return Color(1.00, 0.60, 0.20)
-		"draw_power": return Color(0.80, 0.75, 0.20)
-		"resilience": return Color(0.40, 0.80, 0.60)
-		"bounty":     return Color(0.95, 0.85, 0.10)
+		"draw_power":   return Color(0.80, 0.75, 0.20)
+		"resilience":   return Color(0.40, 0.80, 0.60)
+		"bounty":       return Color(0.95, 0.85, 0.10)
+		"bully":        return Color(0.90, 0.50, 0.20)
+		"late_bloomer": return Color(0.35, 0.80, 0.35)
+		"first_light":  return Color(1.00, 0.95, 0.55)
+		"grand_finale": return Color(0.75, 0.45, 1.00)
 	return Color(0.30, 0.30, 0.42)
 
 func rarity_color(rarity: String) -> Color:
@@ -926,9 +930,11 @@ func run_battle() -> void:
 	await _show_reveal_window(result["left_unflipped"], result["right_unflipped"])
 
 	var bw = "player" if result["winner"] == "left" else ("ai" if result["winner"] == "right" else "tie")
+	var extra_dmg = result.get("chain_lightning_bonus", 0) if bw == "player" else 0
 	run_state = RunEngine.apply_battle_result(run_state, {
 		"winner": bw, "margin": result["margin"],
-		"gold_bonus": result["left_gold_bonus"]
+		"gold_bonus": result["left_gold_bonus"],
+		"extra_damage": extra_dmg
 	})
 	_update_status()
 	battle_active = false

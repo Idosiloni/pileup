@@ -4,9 +4,9 @@ const REROLL_COST = 1
 
 # ── power-up rarity pools ──────────────────────────────────────────────────────
 const POWER_UP_POOL = {
-	"common":   ["valor", "spite", "blaze", "martyr", "spotlight", "draw_power"],
-	"uncommon": ["pierce", "echo", "comeback", "coin_press", "shield", "avenger", "phoenix", "resilience", "bounty"],
-	"rare":     ["anchor", "stage_hog", "eclipse", "storm"]
+	"common":   ["valor", "spite", "blaze", "martyr", "spotlight", "draw_power", "bully", "first_light"],
+	"uncommon": ["pierce", "echo", "comeback", "coin_press", "shield", "avenger", "phoenix", "resilience", "bounty", "grand_finale"],
+	"rare":     ["anchor", "stage_hog", "eclipse", "storm", "late_bloomer"]
 }
 
 func _power_up_rarities_for_level(shop_level: int) -> Array:

@@ -143,7 +143,7 @@ func upgrade_shop(run: Dictionary) -> Dictionary:
 	return new_run
 
 func apply_battle_result(run: Dictionary, result: Dictionary) -> Dictionary:
-	var damage        = mini(3, result.get("margin", 0))
+	var damage        = mini(3, result.get("margin", 0)) + result.get("extra_damage", 0)
 	var new_player_hp = run["player_hp"]
 	var new_ai_hp     = run["ai_hp"]
 	if result["winner"] == "ai":     new_player_hp = maxi(0, run["player_hp"] - damage)
@@ -159,4 +159,28 @@ func apply_battle_result(run: Dictionary, result: Dictionary) -> Dictionary:
 	new_run["phase"]                = phase
 	new_run["shop_level"]           = run.get("shop_level", 1)
 	new_run["sells_used_this_shop"] = 0
+
+	# ── Late Bloomer: +1 value per battle (max 5 stacks) ─────────────────────
+	var grown_cards = []
+	for c in new_run["player_pile"]["cards"]:
+		if c.get("abilities", []).has("late_bloomer"):
+			var nc     = c.duplicate(true)
+			var blooms = nc.get("_bloomer_count", 0)
+			if blooms < 5:
+				nc["value"]          = nc["value"] + 1
+				nc["_bloomer_count"] = blooms + 1
+			grown_cards.append(nc)
+		else:
+			grown_cards.append(c)
+	new_run["player_pile"]["cards"] = grown_cards
+
+	# ── Compound Card: random card +1 value after each battle ─────────────
+	if run.get("jokers", []).has("compound_card") and new_run["player_pile"]["cards"].size() > 0:
+		var idx = randi() % new_run["player_pile"]["cards"].size()
+		var cc_cards = new_run["player_pile"]["cards"].duplicate(true)
+		var nc       = cc_cards[idx].duplicate(true)
+		nc["value"]  = nc["value"] + 1
+		cc_cards[idx] = nc
+		new_run["player_pile"]["cards"] = cc_cards
+
 	return new_run
