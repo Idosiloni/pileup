@@ -3,6 +3,10 @@ extends Control
 # ── signals ───────────────────────────────────────────────────────────────────
 signal flip_continue_pressed
 
+# ── fonts ─────────────────────────────────────────────────────────────────────
+var font_anton:  FontFile = null
+var font_nunito: FontFile = null
+
 # ── state ─────────────────────────────────────────────────────────────────────
 var run_state:             Dictionary = {}
 var current_shop:          Dictionary = {}
@@ -43,25 +47,27 @@ var log_list:             VBoxContainer
 var perk_overlay:         Control = null
 
 # ── palette ───────────────────────────────────────────────────────────────────
-const C_BG       = Color(0.05, 0.05, 0.09)
-const C_PANEL    = Color(0.09, 0.09, 0.15)
-const C_CARD     = Color(0.11, 0.11, 0.20)
-const C_SEL      = Color(0.16, 0.16, 0.28)
-const C_BTN      = Color(0.16, 0.18, 0.28)
-const C_ACCENT   = Color(0.95, 0.78, 0.20)
-const C_WIN      = Color(0.22, 0.85, 0.45)
-const C_LOSE     = Color(0.90, 0.25, 0.25)
-const C_TIE      = Color(0.85, 0.80, 0.25)
-const C_TEXT     = Color(0.92, 0.92, 0.96)
-const C_DIM      = Color(0.45, 0.45, 0.58)
-const C_GOLD     = Color(1.00, 0.82, 0.20)
-const C_MANA     = Color(0.45, 0.65, 1.00)
-const C_SELL     = Color(0.85, 0.22, 0.22)
-const C_FREEZE   = Color(0.22, 0.55, 0.80)
-const C_COMMON   = Color(0.55, 0.55, 0.65)
-const C_UNCOMMON = Color(0.35, 0.65, 1.00)
-const C_RARE     = Color(1.00, 0.75, 0.10)
-const C_JOKER    = Color(0.65, 0.30, 1.00)
+const C_BG         = Color(0.04, 0.10, 0.05)
+const C_PANEL      = Color(0.04, 0.11, 0.05)
+const C_CARD       = Color(0.96, 0.93, 0.85)   # cream card face
+const C_SEL        = Color(0.99, 0.97, 0.90)   # bright cream when selected
+const C_BTN        = Color(0.10, 0.22, 0.12)
+const C_ACCENT     = Color(0.97, 0.82, 0.22)
+const C_WIN        = Color(0.20, 0.82, 0.42)
+const C_LOSE       = Color(0.90, 0.25, 0.25)
+const C_TIE        = Color(0.85, 0.80, 0.25)
+const C_TEXT       = Color(0.92, 0.92, 0.96)
+const C_DIM        = Color(0.48, 0.52, 0.48)
+const C_GOLD       = Color(1.00, 0.82, 0.20)
+const C_MANA       = Color(0.45, 0.65, 1.00)
+const C_SELL       = Color(0.85, 0.22, 0.22)
+const C_FREEZE     = Color(0.22, 0.55, 0.80)
+const C_COMMON     = Color(0.55, 0.55, 0.65)
+const C_UNCOMMON   = Color(0.35, 0.65, 1.00)
+const C_RARE       = Color(1.00, 0.75, 0.10)
+const C_JOKER      = Color(0.65, 0.30, 1.00)
+const C_CARD_RED   = Color(0.76, 0.06, 0.06)   # deep crimson on cream
+const C_CARD_BLACK = Color(0.08, 0.06, 0.12)   # near-black on cream
 
 func ability_color(abl: String) -> Color:
 	match abl:
@@ -104,6 +110,8 @@ func rarity_color(rarity: String) -> Color:
 
 # ── boot ──────────────────────────────────────────────────────────────────────
 func _ready() -> void:
+	font_anton  = load("res://fonts/Anton-Regular.ttf")
+	font_nunito = load("res://fonts/Nunito.ttf")
 	_build_ui()
 
 # ── ui construction ───────────────────────────────────────────────────────────
@@ -112,6 +120,14 @@ func _build_ui() -> void:
 	bg.color = C_BG
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
+
+	var felt_rect = ColorRect.new()
+	felt_rect.color = Color(1, 1, 1, 1)
+	felt_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var felt_mat = ShaderMaterial.new()
+	felt_mat.shader = load("res://shaders/felt_bg.gdshader")
+	felt_rect.material = felt_mat
+	add_child(felt_rect)
 
 	# Root layout: header → status → scrollable content → pile (pinned bottom)
 	var root = VBoxContainer.new()
@@ -147,7 +163,7 @@ func _build_ui() -> void:
 	mid_inner.add_child(battle_section)
 	_build_battle_section(battle_section)
 
-	var log_wrap = _panel(mid_inner, Color(0.07, 0.07, 0.12), 8)
+	var log_wrap = _panel(mid_inner, Color(0.02, 0.07, 0.03, 0.80), 8)
 	log_wrap.custom_minimum_size.y = 80
 	var log_scroll = ScrollContainer.new()
 	log_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -162,36 +178,68 @@ func _build_ui() -> void:
 	_build_pile_section(root)
 
 func _build_header(parent: Control) -> void:
+	var hdr_panel = PanelContainer.new()
+	hdr_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var hdr_sb = StyleBoxFlat.new()
+	hdr_sb.bg_color = Color(0.02, 0.06, 0.02, 0.88)
+	hdr_sb.border_width_bottom = 2
+	hdr_sb.border_color = Color(0.22, 0.48, 0.24, 0.75)
+	hdr_sb.set_content_margin_all(10)
+	hdr_sb.set_content_margin(SIDE_LEFT, 16)
+	hdr_sb.set_content_margin(SIDE_RIGHT, 16)
+	hdr_panel.add_theme_stylebox_override("panel", hdr_sb)
+	parent.add_child(hdr_panel)
+
 	var hdr = HBoxContainer.new()
-	hdr.add_theme_constant_override("separation", 14)
-	parent.add_child(hdr)
+	hdr.add_theme_constant_override("separation", 8)
+	hdr_panel.add_child(hdr)
 
 	var title = Label.new()
 	title.text = "PILEUP"
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", 40)
 	title.add_theme_color_override("font_color", C_ACCENT)
+	if font_anton: title.add_theme_font_override("font", font_anton)
 	hdr.add_child(title)
+
+	var sub = Label.new()
+	sub.text = "card battle"
+	sub.add_theme_font_size_override("font_size", 10)
+	sub.add_theme_color_override("font_color", C_DIM)
+	sub.size_flags_vertical = Control.SIZE_SHRINK_END
+	hdr.add_child(sub)
 
 	_spacer(hdr)
 
-	var new_run_btn = _btn(hdr, "New Run", Color(0.16, 0.48, 0.22))
+	var new_run_btn = _btn(hdr, "New Run", Color(0.12, 0.30, 0.14))
 	new_run_btn.custom_minimum_size.x = 100
 	new_run_btn.pressed.connect(_on_new_run)
 
 func _build_status_bar(parent: Control) -> void:
-	status_bar = _panel(parent, Color(0.08, 0.08, 0.14), 10)
-	status_bar.hide()
+	var sp = PanelContainer.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sp_sb = StyleBoxFlat.new()
+	sp_sb.bg_color = Color(0.02, 0.07, 0.03, 0.90)
+	sp_sb.border_width_bottom = 1
+	sp_sb.border_color = Color(0.18, 0.40, 0.20, 0.5)
+	sp_sb.set_content_margin_all(8)
+	sp_sb.set_content_margin(SIDE_LEFT, 14)
+	sp_sb.set_content_margin(SIDE_RIGHT, 14)
+	sp.add_theme_stylebox_override("panel", sp_sb)
+	sp.hide()
+	parent.add_child(sp)
+	status_bar = sp
+
 	var row = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	status_bar.add_child(row)
 
 	# Player HP
 	var pl = HBoxContainer.new()
-	pl.add_theme_constant_override("separation", 8)
+	pl.add_theme_constant_override("separation", 6)
 	row.add_child(pl)
-	_lbl(pl, "YOU", C_DIM).add_theme_font_size_override("font_size", 11)
-	player_hp_label = _lbl(pl, "25 HP", C_WIN)
-	player_hp_label.add_theme_font_size_override("font_size", 16)
+	_lbl(pl, "YOU", C_DIM).add_theme_font_size_override("font_size", 10)
+	player_hp_label = _lbl(pl, "♥ 25", C_WIN)
+	player_hp_label.add_theme_font_size_override("font_size", 18)
 
 	_spacer(row)
 
@@ -201,13 +249,13 @@ func _build_status_bar(parent: Control) -> void:
 	row.add_child(center)
 	round_label = _lbl(center, "Round 1", C_TEXT)
 	round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	round_label.add_theme_font_size_override("font_size", 13)
+	round_label.add_theme_font_size_override("font_size", 12)
 	var cur = HBoxContainer.new()
 	cur.alignment = BoxContainer.ALIGNMENT_CENTER
 	cur.add_theme_constant_override("separation", 16)
 	center.add_child(cur)
-	gold_label = _lbl(cur, "7g", C_GOLD)
-	gold_label.add_theme_font_size_override("font_size", 15)
+	gold_label = _lbl(cur, "◈ 7", C_GOLD)
+	gold_label.add_theme_font_size_override("font_size", 16)
 	joker_status_label = _lbl(center, "", C_JOKER)
 	joker_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	joker_status_label.add_theme_font_size_override("font_size", 11)
@@ -216,11 +264,11 @@ func _build_status_bar(parent: Control) -> void:
 
 	# AI HP
 	var ai = HBoxContainer.new()
-	ai.add_theme_constant_override("separation", 8)
+	ai.add_theme_constant_override("separation", 6)
 	row.add_child(ai)
-	ai_hp_label = _lbl(ai, "25 HP", C_LOSE)
-	ai_hp_label.add_theme_font_size_override("font_size", 16)
-	_lbl(ai, "AI", C_DIM).add_theme_font_size_override("font_size", 11)
+	ai_hp_label = _lbl(ai, "25 ♥", C_LOSE)
+	ai_hp_label.add_theme_font_size_override("font_size", 18)
+	_lbl(ai, "AI", C_DIM).add_theme_font_size_override("font_size", 10)
 
 func _build_shop_section(parent: Control) -> void:
 	# ── action bar: title + level + upgrade + reroll + battle ──────────────────
@@ -241,7 +289,7 @@ func _build_shop_section(parent: Control) -> void:
 
 	# ── power-ups ──────────────────────────────────────────────────────────────
 	_section_header(parent, "POWER UPS", "Select a card in your pile below, then click Apply")
-	var pow_wrap = _panel(parent, Color(0.09, 0.09, 0.15), 14)
+	var pow_wrap = _panel(parent, Color(0.03, 0.08, 0.04, 0.80), 14)
 	var pow_inner = HBoxContainer.new()
 	pow_inner.alignment = BoxContainer.ALIGNMENT_CENTER
 	pow_inner.add_theme_constant_override("separation", 16)
@@ -263,7 +311,7 @@ func _build_shop_section(parent: Control) -> void:
 	j_cap_lbl.add_theme_font_size_override("font_size", 11)
 	joker_section.set_meta("cap_lbl", j_cap_lbl)
 
-	var joker_wrap = _panel(joker_section, Color(0.10, 0.07, 0.18), 12)
+	var joker_wrap = _panel(joker_section, Color(0.04, 0.06, 0.10, 0.80), 12)
 	var joker_sb = joker_wrap.get_theme_stylebox("panel").duplicate()
 	joker_sb.border_width_left   = 1; joker_sb.border_width_right  = 1
 	joker_sb.border_width_top    = 1; joker_sb.border_width_bottom = 1
@@ -323,10 +371,10 @@ func _build_pile_section(parent: Control) -> void:
 	pile_scroll.add_child(pile_cards_row)
 
 	# Selected card panel (shown below cards when a card is selected)
-	selected_card_panel = _panel(vcol, Color(0.06, 0.09, 0.07), 10)
+	selected_card_panel = _panel(vcol, Color(0.02, 0.07, 0.03, 0.80), 10)
 	var sel_sb = selected_card_panel.get_theme_stylebox("panel").duplicate()
 	sel_sb.border_width_top = 1
-	sel_sb.border_color = Color(0.18, 0.38, 0.22, 0.6)
+	sel_sb.border_color = Color(0.22, 0.48, 0.24, 0.6)
 	selected_card_panel.add_theme_stylebox_override("panel", sel_sb)
 	selected_card_panel.hide()
 
@@ -359,7 +407,7 @@ func _build_battle_section(parent: Control) -> void:
 	arena_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	arena_status_label.add_theme_font_size_override("font_size", 12)
 
-	var stag_panel = _panel(arena, Color(0.09, 0.09, 0.16), 10)
+	var stag_panel = _panel(arena, Color(0.02, 0.08, 0.03, 0.80), 10)
 	var stag_col = VBoxContainer.new()
 	stag_col.add_theme_constant_override("separation", 6)
 	stag_panel.add_child(stag_col)
@@ -387,7 +435,7 @@ func _build_battle_section(parent: Control) -> void:
 	result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result_label.add_theme_font_size_override("font_size", 20)
 
-	flip_btn = _btn(arena, "Flip Card", Color(0.22, 0.32, 0.55))
+	flip_btn = _btn(arena, "Flip Card", Color(0.35, 0.26, 0.08))
 	flip_btn.custom_minimum_size = Vector2(160, 44)
 	flip_btn.disabled = true
 	flip_btn.pressed.connect(_on_flip_btn)
@@ -414,24 +462,22 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 	var suit      = _card_suit(suit_name)
 	var has_abls  = not abls.is_empty()
 	var first_abl = abls[0] if has_abls else ""
-	var base_suit_clr = Color(0.85, 0.22, 0.22) if is_red else Color(0.38, 0.32, 0.55)
-	var abl_clr  = ability_color(first_abl) if has_abls else base_suit_clr
-	var border   = C_ACCENT if selected else (abl_clr if has_abls else base_suit_clr)
-	var large    = h >= 110
+	var suit_clr  = C_CARD_RED if is_red else C_CARD_BLACK
+	var abl_clr   = ability_color(first_abl) if has_abls else suit_clr
+	var large     = h >= 110
 
 	var cp = PanelContainer.new()
 	cp.custom_minimum_size = Vector2(w, h)
 	var sb = StyleBoxFlat.new()
-	var card_bg = Color(0.20, 0.10, 0.14) if is_red else Color(0.12, 0.10, 0.22)
-	sb.bg_color = Color(0.22, 0.14, 0.20) if (selected and is_red) else (Color(0.17, 0.14, 0.30) if selected else card_bg)
-	sb.set_corner_radius_all(8)
+	sb.bg_color = C_SEL if selected else C_CARD
+	sb.set_corner_radius_all(9)
 	var bw = 3 if selected else 2
 	sb.border_width_left   = bw; sb.border_width_right  = bw
 	sb.border_width_top    = bw; sb.border_width_bottom = bw
-	sb.border_color  = border
-	sb.shadow_color  = Color(0, 0, 0, 0.65)
-	sb.shadow_size   = 6
-	sb.shadow_offset = Vector2(0, 3)
+	sb.border_color  = C_ACCENT if selected else suit_clr
+	sb.shadow_color  = Color(0, 0, 0, 0.72)
+	sb.shadow_size   = 10 if large else 5
+	sb.shadow_offset = Vector2(2, 4)
 	sb.set_content_margin_all(0)
 	cp.add_theme_stylebox_override("panel", sb)
 	parent.add_child(cp)
@@ -458,8 +504,9 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 
 	var corner_val = Label.new()
 	corner_val.text = str(val)
-	corner_val.add_theme_font_size_override("font_size", 10 if large else 8)
-	corner_val.add_theme_color_override("font_color", C_TEXT)
+	corner_val.add_theme_font_size_override("font_size", 11 if large else 9)
+	corner_val.add_theme_color_override("font_color", suit_clr)
+	if font_nunito: corner_val.add_theme_font_override("font", font_nunito)
 	top_row.add_child(corner_val)
 
 	var spc = Control.new()
@@ -468,8 +515,9 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 
 	var corner_suit = Label.new()
 	corner_suit.text = suit
-	corner_suit.add_theme_font_size_override("font_size", 10 if large else 8)
-	corner_suit.add_theme_color_override("font_color", abl_clr)
+	corner_suit.add_theme_font_size_override("font_size", 11 if large else 9)
+	corner_suit.add_theme_color_override("font_color", suit_clr)
+	if font_nunito: corner_suit.add_theme_font_override("font", font_nunito)
 	top_row.add_child(corner_suit)
 
 	# Center art area
@@ -477,22 +525,23 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 	center.size_flags_vertical   = Control.SIZE_EXPAND_FILL
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center.alignment = BoxContainer.ALIGNMENT_CENTER
-	center.add_theme_constant_override("separation", 1)
+	center.add_theme_constant_override("separation", 0)
 	col.add_child(center)
 
 	var deco = Label.new()
 	deco.text = suit
 	deco.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	deco.add_theme_font_size_override("font_size", 18 if large else 12)
-	deco.add_theme_color_override("font_color", abl_clr)
-	deco.modulate.a = 0.30
+	deco.add_theme_font_size_override("font_size", 20 if large else 13)
+	deco.add_theme_color_override("font_color", suit_clr)
+	deco.modulate.a = 0.18
 	center.add_child(deco)
 
 	var val_lbl = Label.new()
 	val_lbl.text = str(val)
 	val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	val_lbl.add_theme_font_size_override("font_size", 36 if large else 22)
-	val_lbl.add_theme_color_override("font_color", C_TEXT)
+	val_lbl.add_theme_font_size_override("font_size", 44 if large else 26)
+	val_lbl.add_theme_color_override("font_color", suit_clr)
+	if font_anton: val_lbl.add_theme_font_override("font", font_anton)
 	center.add_child(val_lbl)
 
 	var wt = card.get("weight", 0)
@@ -509,24 +558,22 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 		pl.text = str(prob) + "%"
 		pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		pl.add_theme_font_size_override("font_size", 8)
-		pl.add_theme_color_override("font_color", C_DIM)
+		pl.add_theme_color_override("font_color", Color(0.35, 0.30, 0.22))
 		center.add_child(pl)
 
-	# Ability strip at bottom (divider + labels)
+	# Ability strip — dark panel so ability colors stay readable on cream
 	if has_abls:
-		var div = ColorRect.new()
-		div.custom_minimum_size = Vector2(0, 1)
-		div.color = abl_clr.darkened(0.35)
-		col.add_child(div)
-
-		var abl_mc = MarginContainer.new()
-		abl_mc.add_theme_constant_override("margin_top",    2)
-		abl_mc.add_theme_constant_override("margin_bottom", 1)
-		col.add_child(abl_mc)
+		var abl_panel = PanelContainer.new()
+		var abl_sb = StyleBoxFlat.new()
+		abl_sb.bg_color = Color(0.06, 0.04, 0.12, 0.88)
+		abl_sb.set_corner_radius_all(5)
+		abl_sb.set_content_margin_all(2)
+		abl_panel.add_theme_stylebox_override("panel", abl_sb)
+		col.add_child(abl_panel)
 
 		var abl_col = VBoxContainer.new()
 		abl_col.add_theme_constant_override("separation", 1)
-		abl_mc.add_child(abl_col)
+		abl_panel.add_child(abl_col)
 
 		for abl in abls:
 			var al = Label.new()
@@ -546,9 +593,9 @@ func _ability_short(abl: String) -> String:
 
 # ── run status ─────────────────────────────────────────────────────────────────
 func _update_status() -> void:
-	player_hp_label.text = str(run_state["player_hp"]) + " HP"
-	ai_hp_label.text     = str(run_state["ai_hp"])     + " HP"
-	gold_label.text      = str(run_state["gold"])      + "g"
+	player_hp_label.text = "♥ " + str(run_state["player_hp"])
+	ai_hp_label.text     = str(run_state["ai_hp"]) + " ♥"
+	gold_label.text      = "◈ " + str(run_state["gold"])
 	round_label.text     = "Round " + str(run_state["round"])
 	var joker_ids   = run_state.get("jokers", [])
 	var joker_names = joker_ids.map(func(j): return Jokers.JOKERS[j]["name"])
@@ -598,7 +645,7 @@ func render_shop_power_ups() -> void:
 		wrap.custom_minimum_size.x = 148
 		inner.add_child(wrap)
 
-		var pp = _panel(wrap, Color(0.10, 0.10, 0.18).lerp(col, 0.07), 14)
+		var pp = _panel(wrap, Color(0.03, 0.08, 0.04).lerp(col, 0.10), 14)
 		# Rarity border
 		var pp_sb = pp.get_theme_stylebox("panel").duplicate()
 		pp_sb.border_width_left   = 2
@@ -688,7 +735,7 @@ func _joker_card_panel(parent: Control, jd: Dictionary, owned: bool) -> PanelCon
 	var jp  = PanelContainer.new()
 	jp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var jsb = StyleBoxFlat.new()
-	jsb.bg_color = Color(0.12, 0.08, 0.22) if not owned else Color(0.16, 0.10, 0.28)
+	jsb.bg_color = Color(0.10, 0.06, 0.22) if not owned else Color(0.15, 0.09, 0.30)
 	jsb.set_corner_radius_all(8)
 	jsb.border_width_left   = 2
 	jsb.border_width_right  = 2
@@ -1011,13 +1058,13 @@ func _hush_card(parent: Control) -> PanelContainer:
 	var cp = PanelContainer.new()
 	cp.custom_minimum_size = Vector2(46, 62)
 	var sb = StyleBoxFlat.new()
-	sb.bg_color = Color(0.10, 0.08, 0.20)
+	sb.bg_color = Color(0.05, 0.15, 0.06)
 	sb.set_corner_radius_all(8)
 	sb.border_width_left   = 2; sb.border_width_right  = 2
 	sb.border_width_top    = 2; sb.border_width_bottom = 2
-	sb.border_color = Color(0.38, 0.26, 0.65)
-	sb.shadow_color = Color(0, 0, 0, 0.55); sb.shadow_size = 5
-	sb.shadow_offset = Vector2(0, 2)
+	sb.border_color = Color(0.28, 0.55, 0.30)
+	sb.shadow_color = Color(0, 0, 0, 0.65); sb.shadow_size = 6
+	sb.shadow_offset = Vector2(1, 3)
 	sb.set_content_margin_all(0)
 	cp.add_theme_stylebox_override("panel", sb)
 	parent.add_child(cp)
@@ -1036,24 +1083,21 @@ func _hush_card(parent: Control) -> PanelContainer:
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	mc.add_child(col)
 
-	# Top-left corner dot
 	var top_dot = Label.new()
 	top_dot.text = "◆"
 	top_dot.add_theme_font_size_override("font_size", 7)
-	top_dot.add_theme_color_override("font_color", Color(0.38, 0.26, 0.65))
+	top_dot.add_theme_color_override("font_color", Color(0.28, 0.55, 0.30))
 	col.add_child(top_dot)
 
-	# Center pattern
 	var center = Label.new()
 	center.text = "◆\n◆◆\n◆"
 	center.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	center.add_theme_font_size_override("font_size", 10)
-	center.add_theme_color_override("font_color", Color(0.30, 0.22, 0.50))
+	center.add_theme_color_override("font_color", Color(0.18, 0.38, 0.20))
 	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	center.vertical_alignment  = VERTICAL_ALIGNMENT_CENTER
 	col.add_child(center)
 
-	# Bottom-right corner dot
 	var bot_row = HBoxContainer.new()
 	bot_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_child(bot_row)
@@ -1062,7 +1106,7 @@ func _hush_card(parent: Control) -> PanelContainer:
 	var bot_dot = Label.new()
 	bot_dot.text = "◆"
 	bot_dot.add_theme_font_size_override("font_size", 7)
-	bot_dot.add_theme_color_override("font_color", Color(0.38, 0.26, 0.65))
+	bot_dot.add_theme_color_override("font_color", Color(0.28, 0.55, 0.30))
 	bot_row.add_child(bot_dot)
 
 	return cp
@@ -1202,24 +1246,25 @@ func _face_down_card(parent: Control) -> PanelContainer:
 	var cp = PanelContainer.new()
 	cp.custom_minimum_size = Vector2(100, 140)
 	var sb = StyleBoxFlat.new()
-	sb.bg_color = Color(0.10, 0.10, 0.18)
+	sb.bg_color = Color(0.05, 0.15, 0.06)
 	sb.set_corner_radius_all(10)
 	sb.border_width_left   = 2
 	sb.border_width_right  = 2
 	sb.border_width_top    = 2
 	sb.border_width_bottom = 2
-	sb.border_color = Color(0.22, 0.22, 0.38)
-	sb.shadow_color = Color(0, 0, 0, 0.5)
-	sb.shadow_size  = 6
+	sb.border_color = Color(0.28, 0.55, 0.30)
+	sb.shadow_color = Color(0, 0, 0, 0.65)
+	sb.shadow_size  = 10
+	sb.shadow_offset = Vector2(2, 5)
 	sb.set_content_margin_all(8)
 	cp.add_theme_stylebox_override("panel", sb)
 	parent.add_child(cp)
 	var l = Label.new()
-	l.text = "?"
+	l.text = "◆\n◆◆\n◆\n◆◆\n◆"
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
-	l.add_theme_font_size_override("font_size", 38)
-	l.add_theme_color_override("font_color", Color(0.28, 0.28, 0.48))
+	l.add_theme_font_size_override("font_size", 16)
+	l.add_theme_color_override("font_color", Color(0.18, 0.38, 0.20))
 	l.set_anchors_preset(Control.PRESET_FULL_RECT)
 	cp.add_child(l)
 	return cp
@@ -1273,10 +1318,12 @@ func _btn(parent: Control, text: String, color: Color = C_BTN) -> Button:
 	b.text = text
 	var sb = StyleBoxFlat.new()
 	sb.bg_color = color
-	sb.set_corner_radius_all(5)
+	sb.set_corner_radius_all(6)
 	sb.set_content_margin_all(8)
+	sb.shadow_color = Color(0, 0, 0, 0.40)
+	sb.shadow_size  = 3
 	b.add_theme_stylebox_override("normal", sb)
-	var sb_hov = sb.duplicate(); sb_hov.bg_color = color.lightened(0.18)
+	var sb_hov = sb.duplicate(); sb_hov.bg_color = color.lightened(0.20)
 	b.add_theme_stylebox_override("hover", sb_hov)
 	var sb_dis = sb.duplicate(); sb_dis.bg_color = color.darkened(0.55)
 	b.add_theme_stylebox_override("disabled", sb_dis)
@@ -1284,6 +1331,7 @@ func _btn(parent: Control, text: String, color: Color = C_BTN) -> Button:
 	b.add_theme_color_override("font_hover_color",    C_TEXT)
 	b.add_theme_color_override("font_disabled_color", C_DIM)
 	b.add_theme_font_size_override("font_size", 13)
+	if font_nunito: b.add_theme_font_override("font", font_nunito)
 	parent.add_child(b)
 	return b
 
@@ -1295,6 +1343,7 @@ func _lbl(parent: Control, text: String, color: Color = C_TEXT) -> Label:
 	var l = Label.new()
 	l.text = text
 	l.add_theme_color_override("font_color", color)
+	if font_nunito: l.add_theme_font_override("font", font_nunito)
 	parent.add_child(l)
 	return l
 
@@ -1330,8 +1379,9 @@ func _show_perk_selection() -> void:
 	var title = Label.new()
 	title.text = "CHOOSE YOUR PERK"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", 32)
 	title.add_theme_color_override("font_color", C_ACCENT)
+	if font_anton: title.add_theme_font_override("font", font_anton)
 	box.add_child(title)
 
 	var sub = Label.new()
@@ -1339,6 +1389,7 @@ func _show_perk_selection() -> void:
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.add_theme_font_size_override("font_size", 12)
 	sub.add_theme_color_override("font_color", C_DIM)
+	if font_nunito: sub.add_theme_font_override("font", font_nunito)
 	box.add_child(sub)
 
 	var row = HBoxContainer.new()
@@ -1353,7 +1404,7 @@ func _show_perk_selection() -> void:
 		wp.add_theme_constant_override("separation", 10)
 		row.add_child(wp)
 
-		var pp = _panel(wp, Color(0.10, 0.12, 0.22), 18)
+		var pp = _panel(wp, Color(0.04, 0.10, 0.05), 18)
 		var sb = pp.get_theme_stylebox("panel").duplicate()
 		sb.border_width_left   = 2
 		sb.border_width_right  = 2
