@@ -26,14 +26,21 @@ const JOKERS = {
 	"time_warp":       {"id": "time_warp",       "name": "Time Warp",       "description": "You flip 6 cards instead of 5.",            "cost": 8, "rarity": "rare"},
 	"chain_lightning": {"id": "chain_lightning", "name": "Chain Lightning", "description": "Win 3 flips in a row: +2 extra HP damage.", "cost": 8, "rarity": "rare"},
 	"speed_demon":     {"id": "speed_demon",     "name": "Speed Demon",     "description": "Battles last 3 flips instead of 5.",        "cost": 8, "rarity": "rare"},
+	"long_haul":       {"id": "long_haul",       "name": "Long Haul",       "description": "Battles last 7 flips instead of 5.",        "cost": 8, "rarity": "rare"},
+	"truncate":        {"id": "truncate",        "name": "Truncate",        "description": "All cards count as value 7 max.",            "cost": 8, "rarity": "rare"},
+	"boost":           {"id": "boost",           "name": "Boost",           "description": "All cards count as value 4 minimum.",       "cost": 8, "rarity": "rare"},
+	"old_soul":        {"id": "old_soul",        "name": "Old Soul",        "description": "All cards +1 after round 5, +1 after round 8.", "cost": 7, "rarity": "rare"},
 	# ── Common (5g) extra ─────────────────────────────────────────────────────
 	"compound_card":   {"id": "compound_card",   "name": "Compound Card",   "description": "After each battle: a random card gains +1 value.", "cost": 5, "rarity": "common"},
+	"mud_pit":         {"id": "mud_pit",         "name": "Mud Pit",         "description": "If you lose a battle: +5g next shop.",      "cost": 5, "rarity": "common"},
+	# ── Uncommon (6g) extra ───────────────────────────────────────────────────
+	"rolling_stone":   {"id": "rolling_stone",   "name": "Rolling Stone",   "description": "Each consecutive win: lowest card +2.",     "cost": 6, "rarity": "uncommon"},
 }
 
 const JOKER_POOL_BY_RARITY = {
-	"common":   ["fortune", "ironclad", "tiebreaker", "odd_job", "even_steven", "scrapper", "last_stand", "compound_card"],
-	"uncommon": ["underdog", "streak", "doubler", "pyromancer", "hoarder", "balance", "opportunist", "momentum", "lowball"],
-	"rare":     ["sniper", "gambler", "colossus", "time_warp", "chain_lightning", "speed_demon"]
+	"common":   ["fortune", "ironclad", "tiebreaker", "odd_job", "even_steven", "scrapper", "last_stand", "compound_card", "mud_pit"],
+	"uncommon": ["underdog", "streak", "doubler", "pyromancer", "hoarder", "balance", "opportunist", "momentum", "lowball", "rolling_stone"],
+	"rare":     ["sniper", "gambler", "colossus", "time_warp", "chain_lightning", "speed_demon", "long_haul", "truncate", "boost", "old_soul"]
 }
 
 # ── pre-flip joker effects ────────────────────────────────────────────────────
@@ -104,7 +111,14 @@ func joker_flip_count(joker_ids: Array) -> int:
 		if jid == "gambler":     override = (4 if override < 0 else min(override, 4))
 		if jid == "time_warp":   override = (6 if override < 0 else max(override, 6))
 		if jid == "speed_demon": override = (3 if override < 0 else min(override, 3))
+		if jid == "long_haul":   override = (7 if override < 0 else max(override, 7))
 	return override
+
+func joker_gold_bonus_on_loss(joker_ids: Array) -> int:
+	var bonus = 0
+	for jid in joker_ids:
+		if jid == "mud_pit": bonus += 5
+	return bonus
 
 # ── highest/lowest anchor helpers ─────────────────────────────────────────────
 func sniper_anchor_id(pile: Dictionary) -> String:

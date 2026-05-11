@@ -28,7 +28,8 @@ func make_run() -> Dictionary:
 		"player_pile":         Cards.make_starter_pile("player"),
 		"phase":               "shop",
 		"shop_level":          1,
-		"sells_used_this_shop": 0
+		"sells_used_this_shop": 0,
+		"win_streak":          0
 	}
 
 func apply_starting_perk(run: Dictionary, perk_id: String) -> Dictionary:
@@ -152,13 +153,19 @@ func apply_battle_result(run: Dictionary, result: Dictionary) -> Dictionary:
 
 	var perk_gold_bonus = 2 if run.get("perk") == "merchant" else 0
 	var new_run = run.duplicate(true)
-	new_run["round"]                = run["round"] + 1
+	var new_round  = run["round"] + 1
+	var win_streak = run.get("win_streak", 0)
+	if result["winner"] == "player": win_streak += 1
+	else:                            win_streak  = 0
+
+	new_run["round"]                = new_round
 	new_run["gold"]                 = STARTING_GOLD + result.get("gold_bonus", 0) + perk_gold_bonus
 	new_run["player_hp"]            = new_player_hp
 	new_run["ai_hp"]                = new_ai_hp
 	new_run["phase"]                = phase
 	new_run["shop_level"]           = run.get("shop_level", 1)
 	new_run["sells_used_this_shop"] = 0
+	new_run["win_streak"]           = win_streak
 
 	# ── Late Bloomer: +1 value per battle (max 5 stacks) ─────────────────────
 	var grown_cards = []
@@ -182,5 +189,26 @@ func apply_battle_result(run: Dictionary, result: Dictionary) -> Dictionary:
 		nc["value"]  = nc["value"] + 1
 		cc_cards[idx] = nc
 		new_run["player_pile"]["cards"] = cc_cards
+
+	# ── Rolling Stone: consecutive wins → lowest card +2 ──────────────────
+	if run.get("jokers", []).has("rolling_stone") and result["winner"] == "player" and win_streak > 0:
+		var rs_cards   = new_run["player_pile"]["cards"].duplicate(true)
+		var lowest_idx = 0
+		for i in range(1, rs_cards.size()):
+			if rs_cards[i]["value"] < rs_cards[lowest_idx]["value"]:
+				lowest_idx = i
+		var nc = rs_cards[lowest_idx].duplicate(true)
+		nc["value"]      = nc["value"] + 2
+		rs_cards[lowest_idx] = nc
+		new_run["player_pile"]["cards"] = rs_cards
+
+	# ── Old Soul: +1 to all cards at the start of round 6 and round 9 ────
+	if run.get("jokers", []).has("old_soul") and (new_round == 6 or new_round == 9):
+		var os_cards = new_run["player_pile"]["cards"].duplicate(true)
+		for i in range(os_cards.size()):
+			var nc  = os_cards[i].duplicate(true)
+			nc["value"] = nc["value"] + 1
+			os_cards[i] = nc
+		new_run["player_pile"]["cards"] = os_cards
 
 	return new_run

@@ -145,6 +145,14 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 		left_eff  = joker_eff["left_eff"]
 		right_eff = joker_eff["right_eff"]
 
+		# ── Truncate / Boost: clamp effective values ──────────────────────────
+		if joker_ids.has("truncate"):
+			left_eff  = mini(left_eff,  7)
+			right_eff = mini(right_eff, 7)
+		if joker_ids.has("boost"):
+			left_eff  = maxi(left_eff,  4)
+			right_eff = maxi(right_eff, 4)
+
 		var flip = resolve_flip(left_card, right_card, left_eff, right_eff)
 
 		# ── Pierce ───────────────────────────────────────────────────────────
@@ -210,6 +218,8 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 		joker_gold_bonus += Jokers.joker_gold_bonus_on_big_win(joker_ids, margin)
 	elif winner == "tie":
 		joker_gold_bonus = Jokers.joker_gold_bonus_on_tie(joker_ids)
+	elif winner == "right":
+		joker_gold_bonus = Jokers.joker_gold_bonus_on_loss(joker_ids)
 
 	# Chain Lightning: 3 consecutive left-wins → +2 extra HP damage
 	var chain_lightning_bonus = 0
