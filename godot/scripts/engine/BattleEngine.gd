@@ -211,6 +211,12 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 			else:                      right_gold_bonus += gev["delta"]
 			events.append(gev)
 
+		# ── Per-flip joker gold (coin_pair) ──────────────────────────────────
+		var per_flip_jg = Jokers.joker_gold_bonus_per_flip(joker_ids, left_card, right_card)
+		if per_flip_jg != 0:
+			left_gold_bonus += per_flip_jg
+			events.append({"source": "joker", "joker_ids": joker_ids, "note": "per-flip gold +" + str(per_flip_jg)})
+
 		prev_winner = flip["winner"]
 		if flip["winner"] == "right": left_loss_count  += 1
 		if flip["winner"] == "left":  right_loss_count += 1

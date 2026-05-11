@@ -166,7 +166,8 @@ func apply_battle_result(run: Dictionary, result: Dictionary) -> Dictionary:
 	if result["winner"] == "player": new_ai_hp     = maxi(0, run["ai_hp"]     - damage)
 	var phase = "over" if (new_player_hp <= 0 or new_ai_hp <= 0) else "shop"
 
-	var perk_gold_bonus = 2 if run.get("perk") == "merchant" else 0
+	var perk_gold_bonus  = 2 if run.get("perk") == "merchant" else 0
+	var frugal_carryover = int(run["gold"] * 0.25) if run.get("jokers", []).has("frugal") else 0
 	var new_run = run.duplicate(true)
 	var new_round  = run["round"] + 1
 	var win_streak = run.get("win_streak", 0)
@@ -174,7 +175,7 @@ func apply_battle_result(run: Dictionary, result: Dictionary) -> Dictionary:
 	else:                            win_streak  = 0
 
 	new_run["round"]                = new_round
-	new_run["gold"]                 = STARTING_GOLD + result.get("gold_bonus", 0) + perk_gold_bonus
+	new_run["gold"]                 = STARTING_GOLD + result.get("gold_bonus", 0) + perk_gold_bonus + frugal_carryover
 	new_run["player_hp"]            = new_player_hp
 	new_run["ai_hp"]                = new_ai_hp
 	new_run["phase"]                = phase

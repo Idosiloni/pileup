@@ -40,12 +40,15 @@ const JOKERS = {
 	# ── Common (5g) extra ─────────────────────────────────────────────────────
 	"symmetry":        {"id": "symmetry",        "name": "Symmetry",        "description": "Both flip same parity: +1 to yours.",                  "cost": 5, "rarity": "common"},
 	"spotlight_effect":{"id": "spotlight_effect","name": "Spotlight Effect","description": "First flip of each battle: your card +3.",             "cost": 5, "rarity": "common"},
+	"coin_pair":       {"id": "coin_pair",       "name": "Coin Pair",       "description": "Both flip same parity: +2g per flip.",                 "cost": 5, "rarity": "common"},
+	# ── Rare (7-8g) extra ─────────────────────────────────────────────────────
+	"frugal":          {"id": "frugal",          "name": "Frugal",          "description": "25% of unspent gold carries to next shop.",            "cost": 7, "rarity": "rare"},
 }
 
 const JOKER_POOL_BY_RARITY = {
-	"common":   ["fortune", "ironclad", "tiebreaker", "odd_job", "even_steven", "scrapper", "last_stand", "compound_card", "mud_pit", "symmetry", "spotlight_effect"],
+	"common":   ["fortune", "ironclad", "tiebreaker", "odd_job", "even_steven", "scrapper", "last_stand", "compound_card", "mud_pit", "symmetry", "spotlight_effect", "coin_pair"],
 	"uncommon": ["underdog", "streak", "doubler", "pyromancer", "hoarder", "balance", "opportunist", "momentum", "lowball", "rolling_stone", "asymmetry", "bookend"],
-	"rare":     ["sniper", "gambler", "colossus", "time_warp", "chain_lightning", "speed_demon", "long_haul", "truncate", "boost", "old_soul"]
+	"rare":     ["sniper", "gambler", "colossus", "time_warp", "chain_lightning", "speed_demon", "long_haul", "truncate", "boost", "old_soul", "frugal"]
 }
 
 # ── pre-flip joker effects ────────────────────────────────────────────────────
@@ -127,6 +130,13 @@ func joker_gold_bonus_on_loss(joker_ids: Array) -> int:
 	var bonus = 0
 	for jid in joker_ids:
 		if jid == "mud_pit": bonus += 5
+	return bonus
+
+func joker_gold_bonus_per_flip(joker_ids: Array, left_card: Dictionary, right_card: Dictionary) -> int:
+	var bonus    = 0
+	var same_par = (left_card["value"] % 2) == (right_card["value"] % 2)
+	for jid in joker_ids:
+		if jid == "coin_pair" and same_par: bonus += 2
 	return bonus
 
 # ── highest/lowest anchor helpers ─────────────────────────────────────────────
