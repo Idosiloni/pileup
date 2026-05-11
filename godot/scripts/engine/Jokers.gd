@@ -34,12 +34,17 @@ const JOKERS = {
 	"compound_card":   {"id": "compound_card",   "name": "Compound Card",   "description": "After each battle: a random card gains +1 value.", "cost": 5, "rarity": "common"},
 	"mud_pit":         {"id": "mud_pit",         "name": "Mud Pit",         "description": "If you lose a battle: +5g next shop.",      "cost": 5, "rarity": "common"},
 	# ── Uncommon (6g) extra ───────────────────────────────────────────────────
-	"rolling_stone":   {"id": "rolling_stone",   "name": "Rolling Stone",   "description": "Each consecutive win: lowest card +2.",     "cost": 6, "rarity": "uncommon"},
+	"rolling_stone":   {"id": "rolling_stone",   "name": "Rolling Stone",   "description": "Each consecutive win: lowest card +2.",                 "cost": 6, "rarity": "uncommon"},
+	"asymmetry":       {"id": "asymmetry",       "name": "Asymmetry",       "description": "Both flip different parity: +2 to yours.",             "cost": 6, "rarity": "uncommon"},
+	"bookend":         {"id": "bookend",         "name": "Bookend",         "description": "First and last flip: +2 to both your cards.",          "cost": 6, "rarity": "uncommon"},
+	# ── Common (5g) extra ─────────────────────────────────────────────────────
+	"symmetry":        {"id": "symmetry",        "name": "Symmetry",        "description": "Both flip same parity: +1 to yours.",                  "cost": 5, "rarity": "common"},
+	"spotlight_effect":{"id": "spotlight_effect","name": "Spotlight Effect","description": "First flip of each battle: your card +3.",             "cost": 5, "rarity": "common"},
 }
 
 const JOKER_POOL_BY_RARITY = {
-	"common":   ["fortune", "ironclad", "tiebreaker", "odd_job", "even_steven", "scrapper", "last_stand", "compound_card", "mud_pit"],
-	"uncommon": ["underdog", "streak", "doubler", "pyromancer", "hoarder", "balance", "opportunist", "momentum", "lowball", "rolling_stone"],
+	"common":   ["fortune", "ironclad", "tiebreaker", "odd_job", "even_steven", "scrapper", "last_stand", "compound_card", "mud_pit", "symmetry", "spotlight_effect"],
+	"uncommon": ["underdog", "streak", "doubler", "pyromancer", "hoarder", "balance", "opportunist", "momentum", "lowball", "rolling_stone", "asymmetry", "bookend"],
 	"rare":     ["sniper", "gambler", "colossus", "time_warp", "chain_lightning", "speed_demon", "long_haul", "truncate", "boost", "old_soul"]
 }
 
@@ -48,16 +53,20 @@ func apply_joker_pre_flip(joker_ids: Array, left_card: Dictionary, right_card: D
 		left_eff: int, right_eff: int, streak_count: int) -> Dictionary:
 	if joker_ids.is_empty():
 		return {"left_eff": left_eff, "right_eff": right_eff}
+	var left_odd  = left_card["value"]  % 2 != 0
+	var right_odd = right_card["value"] % 2 != 0
 	for jid in joker_ids:
-		if jid == "underdog"    and left_card["value"] < right_card["value"]:  left_eff  += 2
-		if jid == "streak":    left_eff += streak_count
-		if jid == "doubler"    and left_card["value"] == right_card["value"]:  left_eff  += 1
-		if jid == "pyromancer" and left_card["value"] == 1:                    left_eff  += 3
-		if jid == "opportunist" and left_card["value"] >= 5:                   left_eff  += 1
-		if jid == "colossus"   and left_card["value"] >= 8:                    left_eff  += 2
-		if jid == "odd_job"    and left_card["value"] % 2 != 0:               left_eff  += 1
-		if jid == "even_steven" and left_card["value"] % 2 == 0:              left_eff  += 1
-		if jid == "lowball"    and left_card["value"] <= 3:                    left_eff  += 2
+		if jid == "underdog"         and left_card["value"] < right_card["value"]:  left_eff += 2
+		if jid == "streak":          left_eff += streak_count
+		if jid == "doubler"          and left_card["value"] == right_card["value"]: left_eff += 1
+		if jid == "pyromancer"       and left_card["value"] == 1:                   left_eff += 3
+		if jid == "opportunist"      and left_card["value"] >= 5:                   left_eff += 1
+		if jid == "colossus"         and left_card["value"] >= 8:                   left_eff += 2
+		if jid == "odd_job"          and left_card["value"] % 2 != 0:              left_eff += 1
+		if jid == "even_steven"      and left_card["value"] % 2 == 0:              left_eff += 1
+		if jid == "lowball"          and left_card["value"] <= 3:                   left_eff += 2
+		if jid == "symmetry"         and left_odd == right_odd:                     left_eff += 1
+		if jid == "asymmetry"        and left_odd != right_odd:                     left_eff += 2
 	return {"left_eff": left_eff, "right_eff": right_eff}
 
 # ── tie overrides ─────────────────────────────────────────────────────────────

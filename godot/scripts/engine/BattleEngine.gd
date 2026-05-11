@@ -131,6 +131,16 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 				right_eff += rev_ev["delta"]
 				events.append({"side": "right", "ability": rev_ev["ability"], "trigger": "on_reveal", "delta": rev_ev["delta"]})
 
+		# ── Spotlight Effect: first flip +3 to left ──────────────────────────
+		if joker_ids.has("spotlight_effect") and i == 0:
+			left_eff += 3
+			events.append({"source": "joker", "joker_ids": ["spotlight_effect"], "note": "first flip +3", "left_eff": left_eff})
+
+		# ── Bookend: first and last flip +2 to left ───────────────────────────
+		if joker_ids.has("bookend") and (i == 0 or i == flip_count - 1):
+			left_eff += 2
+			events.append({"source": "joker", "joker_ids": ["bookend"], "note": "bookend +2", "left_eff": left_eff})
+
 		# ── Last Stand: final flip +3 to both ────────────────────────────────
 		if joker_ids.has("last_stand") and i == flip_count - 1:
 			left_eff  += 3
