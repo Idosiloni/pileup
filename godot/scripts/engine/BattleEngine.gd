@@ -83,6 +83,8 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 	var prev_winner        = ""
 	var max_left_streak    = 0
 	var cur_left_streak    = 0
+	var left_loss_count    = 0
+	var right_loss_count   = 0
 
 	var left_flipped_ids  = {}
 	for c in left_flipped:  left_flipped_ids[c["id"]]  = true
@@ -111,9 +113,15 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 		if left_abls.has("avenger") and prev_winner == "right":
 			left_eff += 3
 			events.append({"side": "left",  "ability": "avenger", "trigger": "on_reveal", "delta": 3})
+		if left_abls.has("rage_build") and left_loss_count > 0:
+			left_eff += left_loss_count
+			events.append({"side": "left",  "ability": "rage_build", "trigger": "on_reveal", "delta": left_loss_count})
 		if right_abls.has("avenger") and prev_winner == "left":
 			right_eff += 3
 			events.append({"side": "right", "ability": "avenger", "trigger": "on_reveal", "delta": 3})
+		if right_abls.has("rage_build") and right_loss_count > 0:
+			right_eff += right_loss_count
+			events.append({"side": "right", "ability": "rage_build", "trigger": "on_reveal", "delta": right_loss_count})
 
 		# ── On Reveal ────────────────────────────────────────────────────────
 		for rev_ev in Abilities.on_reveal_events(left_abls):
@@ -204,6 +212,8 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 			events.append(gev)
 
 		prev_winner = flip["winner"]
+		if flip["winner"] == "right": left_loss_count  += 1
+		if flip["winner"] == "left":  right_loss_count += 1
 
 		flips.append({
 			"index":           i,

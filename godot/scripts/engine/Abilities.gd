@@ -34,6 +34,7 @@ const ABILITIES = {
 	# ── Probability-shift with bonus (4-6g) ───────────────────────────────────
 	"wallflower":   {"id": "wallflower",   "label": "Wallflower",   "description": "-50 flip weight, but +3 on reveal",            "trigger": "passive",  "rarity": "uncommon", "cost": 4},
 	"reaper":       {"id": "reaper",       "label": "Reaper",       "description": "Win by 5+: foe's next card -3",                "trigger": "on_win",   "rarity": "rare",     "cost": 6},
+	"rage_build":   {"id": "rage_build",   "label": "Rage Build",   "description": "+1 per prior loss this battle",               "trigger": "on_reveal","rarity": "rare",     "cost": 6},
 }
 
 # ── reveal events ─────────────────────────────────────────────────────────────

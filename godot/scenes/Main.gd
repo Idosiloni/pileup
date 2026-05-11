@@ -90,6 +90,7 @@ func ability_color(abl: String) -> Color:
 		"grand_finale": return Color(0.75, 0.45, 1.00)
 		"wallflower":   return Color(0.65, 0.50, 0.80)
 		"reaper":       return Color(0.45, 0.85, 0.65)
+		"rage_build":   return Color(0.95, 0.35, 0.20)
 	return Color(0.30, 0.30, 0.42)
 
 func rarity_color(rarity: String) -> Color:
