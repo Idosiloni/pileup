@@ -37,6 +37,16 @@ const ABILITIES = {
 	"rage_build":   {"id": "rage_build",   "label": "Rage Build",   "description": "+1 per prior loss this battle",               "trigger": "on_reveal","rarity": "rare",     "cost": 6},
 	"bitter_end":   {"id": "bitter_end",   "label": "Bitter End",   "description": "Lose by 8+: foe's next card -4",             "trigger": "on_loss",  "rarity": "uncommon", "cost": 4},
 	"last_laugh":   {"id": "last_laugh",   "label": "Last Laugh",   "description": "Lose on final flip: +5g",                    "trigger": "on_loss",  "rarity": "uncommon", "cost": 4},
+	# ── Epic (9-11g) ──────────────────────────────────────────────────────────────
+	"titan":        {"id": "titan",        "label": "Titan",        "description": "On Reveal: +6",                               "trigger": "on_reveal","rarity": "epic",      "cost": 9},
+	"fortress":     {"id": "fortress",     "label": "Fortress",     "description": "On Win: foe next -4",                         "trigger": "on_win",   "rarity": "epic",      "cost": 10},
+	"warlord":      {"id": "warlord",      "label": "Warlord",      "description": "On Win: your next +3",                        "trigger": "on_win",   "rarity": "epic",      "cost": 10},
+	"nemesis":      {"id": "nemesis",      "label": "Nemesis",      "description": "On Loss: your next +4",                       "trigger": "on_loss",  "rarity": "epic",      "cost": 10},
+	"phantom":      {"id": "phantom",      "label": "Phantom",      "description": "+100 flip weight",                            "trigger": "passive",  "rarity": "epic",      "cost": 11},
+	# ── Legendary (14-16g) ────────────────────────────────────────────────────────
+	"godslayer":    {"id": "godslayer",    "label": "Godslayer",    "description": "On Reveal: +9",                               "trigger": "on_reveal","rarity": "legendary", "cost": 14},
+	"annihilator":  {"id": "annihilator",  "label": "Annihilator",  "description": "On Win: foe next -6",                         "trigger": "on_win",   "rarity": "legendary", "cost": 15},
+	"ascendant":    {"id": "ascendant",    "label": "Ascendant",    "description": "On Reveal: +4, On Win: your next +4",         "trigger": "on_reveal","rarity": "legendary", "cost": 16},
 }
 
 # ── reveal events ─────────────────────────────────────────────────────────────
@@ -47,8 +57,11 @@ func on_reveal_events(abilities: Array) -> Array:
 		if abl == "blaze":      events.append({"ability": abl, "delta": 2,  "target": "self"})
 		if abl == "echo":       events.append({"ability": abl, "delta": 3,  "target": "self"})
 		if abl == "eclipse":    events.append({"ability": abl, "delta": 5,  "target": "self"})
-		if abl == "bully":      events.append({"ability": abl, "delta": -1, "target": "opponent"})
-		if abl == "wallflower": events.append({"ability": abl, "delta": 3,  "target": "self"})
+		if abl == "bully":        events.append({"ability": abl, "delta": -1, "target": "opponent"})
+		if abl == "wallflower":   events.append({"ability": abl, "delta": 3,  "target": "self"})
+		if abl == "titan":        events.append({"ability": abl, "delta": 6,  "target": "self"})
+		if abl == "godslayer":    events.append({"ability": abl, "delta": 9,  "target": "self"})
+		if abl == "ascendant":    events.append({"ability": abl, "delta": 4,  "target": "self"})
 	return events
 
 func on_reveal_bonus(abilities: Array) -> int:
@@ -73,11 +86,21 @@ func post_flip_events(winner: String, left_abls: Array, right_abls: Array, margi
 				events.append({"side": "right", "ability": abl, "trigger": "on_win",  "delta": -3, "next": true})
 			if abl == "reaper" and margin >= 5:
 				events.append({"side": "right", "ability": abl, "trigger": "on_win",  "delta": -3, "next": true})
+			if abl == "fortress":
+				events.append({"side": "right", "ability": abl, "trigger": "on_win",  "delta": -4, "next": true})
+			if abl == "warlord":
+				events.append({"side": "left",  "ability": abl, "trigger": "on_win",  "delta":  3, "next": true})
+			if abl == "annihilator":
+				events.append({"side": "right", "ability": abl, "trigger": "on_win",  "delta": -6, "next": true})
+			if abl == "ascendant":
+				events.append({"side": "left",  "ability": abl, "trigger": "on_win",  "delta":  4, "next": true})
 		for abl in right_abls:
 			if abl == "spite":
 				events.append({"side": "right", "ability": abl, "trigger": "on_loss", "delta": -1, "next": true})
 			if abl == "martyr":
 				events.append({"side": "right", "ability": abl, "trigger": "on_loss", "delta":  2, "next": true})
+			if abl == "nemesis":
+				events.append({"side": "right", "ability": abl, "trigger": "on_loss", "delta":  4, "next": true})
 	elif winner == "right":
 		for abl in right_abls:
 			if abl == "valor":
@@ -86,6 +109,14 @@ func post_flip_events(winner: String, left_abls: Array, right_abls: Array, margi
 				events.append({"side": "left",  "ability": abl, "trigger": "on_win",  "delta": -2, "next": true})
 			if abl == "storm":
 				events.append({"side": "left",  "ability": abl, "trigger": "on_win",  "delta": -3, "next": true})
+			if abl == "fortress":
+				events.append({"side": "left",  "ability": abl, "trigger": "on_win",  "delta": -4, "next": true})
+			if abl == "warlord":
+				events.append({"side": "right", "ability": abl, "trigger": "on_win",  "delta":  3, "next": true})
+			if abl == "annihilator":
+				events.append({"side": "left",  "ability": abl, "trigger": "on_win",  "delta": -6, "next": true})
+			if abl == "ascendant":
+				events.append({"side": "right", "ability": abl, "trigger": "on_win",  "delta":  4, "next": true})
 		for abl in left_abls:
 			if abl == "spite":
 				events.append({"side": "left",  "ability": abl, "trigger": "on_loss", "delta": -1, "next": true})
@@ -93,6 +124,8 @@ func post_flip_events(winner: String, left_abls: Array, right_abls: Array, margi
 				events.append({"side": "left",  "ability": abl, "trigger": "on_loss", "delta":  2, "next": true})
 			if abl == "bitter_end" and margin >= 8:
 				events.append({"side": "right", "ability": abl, "trigger": "on_loss", "delta": -4, "next": true})
+			if abl == "nemesis":
+				events.append({"side": "left",  "ability": abl, "trigger": "on_loss", "delta":  4, "next": true})
 	elif winner == "tie":
 		for abl in left_abls:
 			if abl == "resilience":

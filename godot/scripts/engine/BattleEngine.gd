@@ -114,6 +114,15 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 				best_val        = c["value"]
 				survivor_card_id = c["id"]
 
+	# ── Heavyweight: highest-value flip card +3 on reveal ─────────────────────
+	var heavyweight_card_id = ""
+	if joker_ids.has("heavyweight"):
+		var best_val = -1
+		for c in left_flipped:
+			if c["value"] > best_val:
+				best_val            = c["value"]
+				heavyweight_card_id = c["id"]
+
 	var left_flipped_ids  = {}
 	for c in left_flipped:  left_flipped_ids[c["id"]]  = true
 	var right_flipped_ids = {}
@@ -141,6 +150,11 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 		if survivor_bonus > 0 and left_card["id"] == survivor_card_id:
 			left_eff += survivor_bonus
 			events.append({"side": "left", "source": "joker", "joker_ids": ["survivor"], "delta": survivor_bonus})
+
+		# ── Heavyweight: +3 on highest-value flip card ────────────────────────
+		if not heavyweight_card_id.is_empty() and left_card["id"] == heavyweight_card_id:
+			left_eff += 3
+			events.append({"side": "left", "source": "joker", "joker_ids": ["heavyweight"], "delta": 3})
 
 		# ── Avenger: +3 if previous flip was lost ────────────────────────────
 		if left_abls.has("avenger") and prev_winner == "right":
@@ -237,6 +251,10 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 			if pev["side"] == "left":  left_pending  += pev["delta"]
 			else:                      right_pending += pev["delta"]
 			events.append(pev)
+
+		# ── Perpetuum: negate negative pending on your side ───────────────────
+		if joker_ids.has("perpetuum") and left_pending < 0:
+			left_pending = 0
 
 		# ── Post-flip gold events (comeback, coin_press) ────────────────────
 		for gev in Abilities.post_flip_gold_events(flip["winner"], left_abls, right_abls, flip["delta"], i == flip_count - 1):

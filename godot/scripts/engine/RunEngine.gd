@@ -8,7 +8,7 @@ const MAX_PILE_SIZE     = 20
 const UPGRADE_COST      = 4
 const SHOP_UPGRADE_COST = 4
 const MAX_JOKERS        = 2
-const MAX_SHOP_LEVEL    = 3
+const MAX_SHOP_LEVEL    = 10
 
 const PERKS = {
 	"merchant":    {"id": "merchant",    "name": "Merchant",    "description": "Start each shop with +2g bonus."},
@@ -89,7 +89,10 @@ func can_buy_joker(run: Dictionary, joker_id: String) -> bool:
 	return run["gold"] >= Jokers.JOKERS[joker_id]["cost"]
 
 func effective_shop_upgrade_cost(run: Dictionary) -> int:
-	return maxi(1, SHOP_UPGRADE_COST - (2 if run.get("perk") == "patron" else 0))
+	var level = run.get("shop_level", 1)
+	var base  = 3 + level  # 4g (lv1→2) … 12g (lv9→10)
+	if run.get("perk") == "patron": base = maxi(1, base - 2)
+	return base
 
 func can_upgrade_shop(run: Dictionary) -> bool:
 	return run.get("shop_level", 1) < MAX_SHOP_LEVEL and run["gold"] >= effective_shop_upgrade_cost(run)
@@ -168,6 +171,9 @@ func apply_battle_result(run: Dictionary, result: Dictionary) -> Dictionary:
 	var new_ai_hp     = run["ai_hp"]
 	if result["winner"] == "ai":     new_player_hp = maxi(0, run["player_hp"] - damage)
 	if result["winner"] == "player": new_ai_hp     = maxi(0, run["ai_hp"]     - damage)
+	# ── Doomsday: ties deal 1 HP damage to opponent ───────────────────────────
+	if run.get("jokers", []).has("doomsday") and result["winner"] == "tie":
+		new_ai_hp = maxi(0, new_ai_hp - 1)
 	var phase = "over" if (new_player_hp <= 0 or new_ai_hp <= 0) else "shop"
 
 	var perk_gold_bonus  = 2 if run.get("perk") == "merchant" else 0
@@ -180,6 +186,9 @@ func apply_battle_result(run: Dictionary, result: Dictionary) -> Dictionary:
 
 	new_run["round"]                = new_round
 	new_run["gold"]                 = STARTING_GOLD + result.get("gold_bonus", 0) + perk_gold_bonus + frugal_carryover
+	# ── Rampage: win streak 3+ earns +4g per battle victory ──────────────────
+	if run.get("jokers", []).has("rampage") and result["winner"] == "player" and win_streak >= 3:
+		new_run["gold"] += 4
 	new_run["player_hp"]            = new_player_hp
 	new_run["ai_hp"]                = new_ai_hp
 	new_run["phase"]                = phase

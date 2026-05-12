@@ -45,14 +45,24 @@ const JOKERS = {
 	"frugal":          {"id": "frugal",          "name": "Frugal",          "description": "25% of unspent gold carries to next shop.",            "cost": 7, "rarity": "rare"},
 	"weighted_dice":   {"id": "weighted_dice",   "name": "Weighted Dice",   "description": "Your 3 highest cards: +25 flip weight each.",          "cost": 8, "rarity": "rare"},
 	"survivor":        {"id": "survivor",        "name": "Survivor",        "description": "Per HP missing: +1 to your highest flipped card.",      "cost": 8, "rarity": "rare"},
-	"slim_pile":       {"id": "slim_pile",       "name": "Slim Pile",       "description": "Pile cap reduced to 8, but all cards +2 value.",          "cost": 8, "rarity": "rare"},
-	"the_architect":   {"id": "the_architect",   "name": "The Architect",   "description": "You can hold 3 Jokers instead of 2.",                     "cost": 8, "rarity": "rare"},
+	"slim_pile":       {"id": "slim_pile",       "name": "Slim Pile",       "description": "Pile cap reduced to 8, but all cards +2 value.",          "cost": 8,  "rarity": "rare"},
+	"the_architect":   {"id": "the_architect",   "name": "The Architect",   "description": "You can hold 3 Jokers instead of 2.",                     "cost": 8,  "rarity": "rare"},
+	# ── Epic (10-12g) ─────────────────────────────────────────────────────────────
+	"heavyweight":     {"id": "heavyweight",     "name": "Heavyweight",     "description": "Your highest-value flip card: +3 on reveal.",              "cost": 10, "rarity": "epic"},
+	"golden_touch":    {"id": "golden_touch",    "name": "Golden Touch",    "description": "Each flip: +1g regardless of outcome.",                   "cost": 11, "rarity": "epic"},
+	"rampage":         {"id": "rampage",         "name": "Rampage",         "description": "Win streak 3+: +4g per battle victory.",                  "cost": 12, "rarity": "epic"},
+	# ── Legendary (15-18g) ────────────────────────────────────────────────────────
+	"doomsday":        {"id": "doomsday",        "name": "Doomsday",        "description": "Tied battles deal 1 HP damage to opponent.",              "cost": 15, "rarity": "legendary"},
+	"perpetuum":       {"id": "perpetuum",       "name": "Perpetuum",       "description": "Negative pending effects on your cards are negated.",     "cost": 16, "rarity": "legendary"},
+	"apotheosis":      {"id": "apotheosis",      "name": "Apotheosis",      "description": "All your flipped cards: +4 on reveal.",                  "cost": 18, "rarity": "legendary"},
 }
 
 const JOKER_POOL_BY_RARITY = {
-	"common":   ["fortune", "ironclad", "tiebreaker", "odd_job", "even_steven", "scrapper", "last_stand", "compound_card", "mud_pit", "symmetry", "spotlight_effect", "coin_pair"],
-	"uncommon": ["underdog", "streak", "doubler", "pyromancer", "hoarder", "balance", "opportunist", "momentum", "lowball", "rolling_stone", "asymmetry", "bookend"],
-	"rare":     ["sniper", "gambler", "colossus", "time_warp", "chain_lightning", "speed_demon", "long_haul", "truncate", "boost", "old_soul", "frugal", "weighted_dice", "survivor", "slim_pile", "the_architect"]
+	"common":    ["fortune", "ironclad", "tiebreaker", "odd_job", "even_steven", "scrapper", "last_stand", "compound_card", "mud_pit", "symmetry", "spotlight_effect", "coin_pair"],
+	"uncommon":  ["underdog", "streak", "doubler", "pyromancer", "hoarder", "balance", "opportunist", "momentum", "lowball", "rolling_stone", "asymmetry", "bookend"],
+	"rare":      ["sniper", "gambler", "colossus", "time_warp", "chain_lightning", "speed_demon", "long_haul", "truncate", "boost", "old_soul", "frugal", "weighted_dice", "survivor", "slim_pile", "the_architect"],
+	"epic":      ["heavyweight", "golden_touch", "rampage"],
+	"legendary": ["doomsday", "perpetuum", "apotheosis"],
 }
 
 # ── pre-flip joker effects ────────────────────────────────────────────────────
@@ -75,6 +85,7 @@ func apply_joker_pre_flip(joker_ids: Array, left_card: Dictionary, right_card: D
 		if jid == "symmetry"         and left_odd == right_odd:                     left_eff += 1
 		if jid == "asymmetry"        and left_odd != right_odd:                     left_eff += 2
 		if jid == "slim_pile":                                                      left_eff += 2
+		if jid == "apotheosis":                                                     left_eff += 4
 	return {"left_eff": left_eff, "right_eff": right_eff}
 
 # ── tie overrides ─────────────────────────────────────────────────────────────
@@ -147,7 +158,8 @@ func joker_gold_bonus_per_flip(joker_ids: Array, left_card: Dictionary, right_ca
 	var bonus    = 0
 	var same_par = (left_card["value"] % 2) == (right_card["value"] % 2)
 	for jid in joker_ids:
-		if jid == "coin_pair" and same_par: bonus += 2
+		if jid == "coin_pair"    and same_par: bonus += 2
+		if jid == "golden_touch":              bonus += 1
 	return bonus
 
 # ── highest/lowest anchor helpers ─────────────────────────────────────────────

@@ -9,6 +9,7 @@ func effective_weight(card: Dictionary) -> int:
 	var abls = card.get("abilities", [])
 	if abls.has("spotlight"):      base += 40
 	if abls.has("stage_hog"):      base += 90
+	if abls.has("phantom"):        base += 100
 	if abls.has("wallflower"):     base -= 50
 	if card.get("_weighted_dice"): base += 25
 	return max(MIN_WEIGHT, base)

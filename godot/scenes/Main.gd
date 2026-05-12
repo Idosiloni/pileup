@@ -65,6 +65,8 @@ const C_FREEZE     = Color(0.22, 0.55, 0.80)
 const C_COMMON     = Color(0.55, 0.55, 0.65)
 const C_UNCOMMON   = Color(0.35, 0.65, 1.00)
 const C_RARE       = Color(1.00, 0.75, 0.10)
+const C_EPIC       = Color(0.82, 0.28, 1.00)
+const C_LEGENDARY  = Color(1.00, 0.55, 0.08)
 const C_JOKER      = Color(0.65, 0.30, 1.00)
 const C_CARD_RED   = Color(0.76, 0.06, 0.06)   # deep crimson on cream
 const C_CARD_BLACK = Color(0.08, 0.06, 0.12)   # near-black on cream
@@ -99,13 +101,23 @@ func ability_color(abl: String) -> Color:
 		"rage_build":   return Color(0.95, 0.35, 0.20)
 		"bitter_end":   return Color(0.60, 0.20, 0.50)
 		"last_laugh":   return Color(0.85, 0.85, 0.30)
+		"titan":        return Color(0.95, 0.62, 0.18)
+		"fortress":     return Color(0.45, 0.62, 1.00)
+		"warlord":      return Color(1.00, 0.42, 0.10)
+		"nemesis":      return Color(0.72, 0.18, 1.00)
+		"phantom":      return Color(0.62, 0.62, 0.88)
+		"godslayer":    return Color(1.00, 0.10, 0.45)
+		"annihilator":  return Color(0.85, 0.05, 0.05)
+		"ascendant":    return Color(1.00, 0.88, 0.25)
 	return Color(0.30, 0.30, 0.42)
 
 func rarity_color(rarity: String) -> Color:
 	match rarity:
-		"common":   return C_COMMON
-		"uncommon": return C_UNCOMMON
-		"rare":     return C_RARE
+		"common":    return C_COMMON
+		"uncommon":  return C_UNCOMMON
+		"rare":      return C_RARE
+		"epic":      return C_EPIC
+		"legendary": return C_LEGENDARY
 	return C_DIM
 
 # ── boot ──────────────────────────────────────────────────────────────────────
