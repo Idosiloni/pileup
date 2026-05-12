@@ -240,4 +240,32 @@ func apply_battle_result(run: Dictionary, result: Dictionary) -> Dictionary:
 			os_cards[i] = nc
 		new_run["player_pile"]["cards"] = os_cards
 
+	# ── Sacrifice: each loss permanently grows a random non-sacrifice card ─
+	var sacrifice_count = result.get("left_sacrifice_count", 0)
+	if sacrifice_count > 0:
+		var sacr_cards = new_run["player_pile"]["cards"].duplicate(true)
+		for _s in range(sacrifice_count):
+			var targets = []
+			for ci in range(sacr_cards.size()):
+				if not sacr_cards[ci].get("abilities", []).has("sacrifice"):
+					targets.append(ci)
+			if targets.is_empty(): break
+			var pick = targets[randi() % targets.size()]
+			var nc   = sacr_cards[pick].duplicate(true)
+			nc["value"] = nc["value"] + 1
+			sacr_cards[pick] = nc
+		new_run["player_pile"]["cards"] = sacr_cards
+
+	# ── Funeral Procession: flips lost → weight bonus on 8+ value cards ──
+	if run.get("jokers", []).has("funeral_procession"):
+		var flips_lost = result.get("right_score", 0)
+		if flips_lost > 0:
+			var fp_cards = new_run["player_pile"]["cards"].duplicate(true)
+			for i in range(fp_cards.size()):
+				if fp_cards[i]["value"] >= 8:
+					var nc = fp_cards[i].duplicate(true)
+					nc["weight"] = nc.get("weight", 0) + flips_lost * 10
+					fp_cards[i] = nc
+			new_run["player_pile"]["cards"] = fp_cards
+
 	return new_run

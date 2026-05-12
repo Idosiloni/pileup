@@ -37,6 +37,9 @@ const ABILITIES = {
 	"rage_build":   {"id": "rage_build",   "label": "Rage Build",   "description": "+1 per prior loss this battle",               "trigger": "on_reveal","rarity": "rare",     "cost": 6},
 	"bitter_end":   {"id": "bitter_end",   "label": "Bitter End",   "description": "Lose by 8+: foe's next card -4",             "trigger": "on_loss",  "rarity": "uncommon", "cost": 4},
 	"last_laugh":   {"id": "last_laugh",   "label": "Last Laugh",   "description": "Lose on final flip: +5g",                    "trigger": "on_loss",  "rarity": "uncommon", "cost": 4},
+	# ── Tribute (3-6g) ────────────────────────────────────────────────────────────
+	"cannon_fodder": {"id": "cannon_fodder", "label": "Cannon Fodder", "description": "+50 flip weight. On Loss: gain 2g",                         "trigger": "passive",  "rarity": "common", "cost": 3},
+	"sacrifice":     {"id": "sacrifice",     "label": "Sacrifice",     "description": "On Loss: a random other card permanently gains +1 value",    "trigger": "on_loss",  "rarity": "rare",   "cost": 6},
 	# ── Epic (9-11g) ──────────────────────────────────────────────────────────────
 	"titan":        {"id": "titan",        "label": "Titan",        "description": "On Reveal: +6",                               "trigger": "on_reveal","rarity": "epic",      "cost": 9},
 	"fortress":     {"id": "fortress",     "label": "Fortress",     "description": "On Win: foe next -4",                         "trigger": "on_win",   "rarity": "epic",      "cost": 10},
@@ -158,9 +161,14 @@ func post_flip_gold_events(winner: String, left_abls: Array, right_abls: Array, 
 	if winner == "left"  and right_abls.has("phoenix"):
 		events.append({"side": "right", "ability": "phoenix",    "trigger": "on_loss", "delta": 1, "currency": "gold"})
 	if winner != "left"  and left_abls.has("last_laugh") and is_last_flip:
-		events.append({"side": "left",  "ability": "last_laugh", "trigger": "on_loss", "delta": 5, "currency": "gold"})
+		events.append({"side": "left",  "ability": "last_laugh",   "trigger": "on_loss", "delta": 5, "currency": "gold"})
 	if winner != "right" and right_abls.has("last_laugh") and is_last_flip:
-		events.append({"side": "right", "ability": "last_laugh", "trigger": "on_loss", "delta": 5, "currency": "gold"})
+		events.append({"side": "right", "ability": "last_laugh",   "trigger": "on_loss", "delta": 5, "currency": "gold"})
+	# ── Cannon Fodder: On Loss → +2g ──────────────────────────────────────────
+	if winner == "right" and left_abls.has("cannon_fodder"):
+		events.append({"side": "left",  "ability": "cannon_fodder", "trigger": "on_loss", "delta": 2, "currency": "gold"})
+	if winner == "left"  and right_abls.has("cannon_fodder"):
+		events.append({"side": "right", "ability": "cannon_fodder", "trigger": "on_loss", "delta": 2, "currency": "gold"})
 	return events
 
 # Convenience wrappers returning totals (used by RunEngine / legacy callers)

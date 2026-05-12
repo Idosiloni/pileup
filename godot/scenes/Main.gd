@@ -109,6 +109,8 @@ func ability_color(abl: String) -> Color:
 		"godslayer":    return Color(1.00, 0.10, 0.45)
 		"annihilator":  return Color(0.85, 0.05, 0.05)
 		"ascendant":    return Color(1.00, 0.88, 0.25)
+		"cannon_fodder":return Color(0.72, 0.48, 0.18)
+		"sacrifice":    return Color(0.80, 0.18, 0.30)
 	return Color(0.30, 0.30, 0.42)
 
 func rarity_color(rarity: String) -> Color:

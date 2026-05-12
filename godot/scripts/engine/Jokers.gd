@@ -47,6 +47,9 @@ const JOKERS = {
 	"survivor":        {"id": "survivor",        "name": "Survivor",        "description": "Per HP missing: +1 to your highest flipped card.",      "cost": 8, "rarity": "rare"},
 	"slim_pile":       {"id": "slim_pile",       "name": "Slim Pile",       "description": "Pile cap reduced to 8, but all cards +2 value.",          "cost": 8,  "rarity": "rare"},
 	"the_architect":   {"id": "the_architect",   "name": "The Architect",   "description": "You can hold 3 Jokers instead of 2.",                     "cost": 8,  "rarity": "rare"},
+	# ── Tribute jokers ────────────────────────────────────────────────────────────
+	"tithe":              {"id": "tithe",              "name": "Tithe",              "description": "Your value 1-3 cards that lose a flip: +3g and your next card +2.", "cost": 6,  "rarity": "uncommon"},
+	"funeral_procession": {"id": "funeral_procession", "name": "Funeral Procession", "description": "Each flip you lost this battle: your 8+ value cards gain +10 flip weight.", "cost": 8,  "rarity": "rare"},
 	# ── Epic (10-12g) ─────────────────────────────────────────────────────────────
 	"heavyweight":     {"id": "heavyweight",     "name": "Heavyweight",     "description": "Your highest-value flip card: +3 on reveal.",              "cost": 10, "rarity": "epic"},
 	"golden_touch":    {"id": "golden_touch",    "name": "Golden Touch",    "description": "Each flip: +1g regardless of outcome.",                   "cost": 11, "rarity": "epic"},
@@ -59,8 +62,8 @@ const JOKERS = {
 
 const JOKER_POOL_BY_RARITY = {
 	"common":    ["fortune", "ironclad", "tiebreaker", "odd_job", "even_steven", "scrapper", "last_stand", "compound_card", "mud_pit", "symmetry", "spotlight_effect", "coin_pair"],
-	"uncommon":  ["underdog", "streak", "doubler", "pyromancer", "hoarder", "balance", "opportunist", "momentum", "lowball", "rolling_stone", "asymmetry", "bookend"],
-	"rare":      ["sniper", "gambler", "colossus", "time_warp", "chain_lightning", "speed_demon", "long_haul", "truncate", "boost", "old_soul", "frugal", "weighted_dice", "survivor", "slim_pile", "the_architect"],
+	"uncommon":  ["underdog", "streak", "doubler", "pyromancer", "hoarder", "balance", "opportunist", "momentum", "lowball", "rolling_stone", "asymmetry", "bookend", "tithe"],
+	"rare":      ["sniper", "gambler", "colossus", "time_warp", "chain_lightning", "speed_demon", "long_haul", "truncate", "boost", "old_soul", "frugal", "weighted_dice", "survivor", "slim_pile", "the_architect", "funeral_procession"],
 	"epic":      ["heavyweight", "golden_touch", "rampage"],
 	"legendary": ["doomsday", "perpetuum", "apotheosis"],
 }

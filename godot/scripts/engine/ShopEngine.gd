@@ -4,9 +4,9 @@ const REROLL_COST = 1
 
 # ── power-up rarity pools ──────────────────────────────────────────────────────
 const POWER_UP_POOL = {
-	"common":    ["valor", "spite", "blaze", "martyr", "spotlight", "draw_power", "bully", "first_light"],
+	"common":    ["valor", "spite", "blaze", "martyr", "spotlight", "draw_power", "bully", "first_light", "cannon_fodder"],
 	"uncommon":  ["pierce", "echo", "comeback", "coin_press", "shield", "avenger", "phoenix", "resilience", "bounty", "grand_finale", "wallflower", "bitter_end", "last_laugh"],
-	"rare":      ["anchor", "stage_hog", "eclipse", "storm", "late_bloomer", "reaper", "rage_build"],
+	"rare":      ["anchor", "stage_hog", "eclipse", "storm", "late_bloomer", "reaper", "rage_build", "sacrifice"],
 	"epic":      ["titan", "fortress", "warlord", "nemesis", "phantom"],
 	"legendary": ["godslayer", "annihilator", "ascendant"],
 }

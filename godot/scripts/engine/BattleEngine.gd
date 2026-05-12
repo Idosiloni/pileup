@@ -102,6 +102,7 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 	var cur_left_streak    = 0
 	var left_loss_count    = 0
 	var right_loss_count   = 0
+	var left_sacrifice_count = 0
 
 	# ── Survivor: HP missing → +N to the highest-value flipped card ─────────
 	var survivor_bonus    = 0
@@ -268,6 +269,19 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 			left_gold_bonus += per_flip_jg
 			events.append({"source": "joker", "joker_ids": joker_ids, "note": "per-flip gold +" + str(per_flip_jg)})
 
+		# ── Tithe: value 1-3 bait card loses → +3g and next card +2 ─────────
+		if joker_ids.has("tithe") and flip["winner"] == "right" and left_card["value"] <= 3:
+			left_gold_bonus += 3
+			left_pending    += 2
+			events.append({"source": "joker", "joker_ids": ["tithe"], "side": "left",
+				"note": "bait loss: +3g, next +2", "delta": 2})
+
+		# ── Sacrifice: track losses so RunEngine can grow a card post-battle ─
+		if flip["winner"] == "right" and left_card.get("abilities", []).has("sacrifice"):
+			left_sacrifice_count += 1
+			events.append({"side": "left", "ability": "sacrifice", "trigger": "on_loss",
+				"note": "random other card +1 value (post-battle)"})
+
 		prev_winner = flip["winner"]
 		if flip["winner"] == "right": left_loss_count  += 1
 		if flip["winner"] == "left":  right_loss_count += 1
@@ -317,5 +331,6 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 		"margin":                 margin,
 		"left_gold_bonus":        left_gold_bonus + joker_gold_bonus,
 		"right_gold_bonus":       right_gold_bonus,
-		"chain_lightning_bonus":  chain_lightning_bonus
+		"chain_lightning_bonus":  chain_lightning_bonus,
+		"left_sacrifice_count":   left_sacrifice_count
 	}
