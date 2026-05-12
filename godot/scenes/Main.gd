@@ -465,6 +465,7 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 	var suit_clr  = C_CARD_RED if is_red else C_CARD_BLACK
 	var abl_clr   = ability_color(first_abl) if has_abls else suit_clr
 	var large     = h >= 110
+	var xlarge    = h >= 130
 
 	var cp = PanelContainer.new()
 	cp.custom_minimum_size = Vector2(w, h)
@@ -504,7 +505,7 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 
 	var corner_val = Label.new()
 	corner_val.text = str(val)
-	corner_val.add_theme_font_size_override("font_size", 11 if large else 9)
+	corner_val.add_theme_font_size_override("font_size", 10 if large else 8)
 	corner_val.add_theme_color_override("font_color", suit_clr)
 	if font_nunito: corner_val.add_theme_font_override("font", font_nunito)
 	top_row.add_child(corner_val)
@@ -515,7 +516,7 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 
 	var corner_suit = Label.new()
 	corner_suit.text = suit
-	corner_suit.add_theme_font_size_override("font_size", 11 if large else 9)
+	corner_suit.add_theme_font_size_override("font_size", 10 if large else 8)
 	corner_suit.add_theme_color_override("font_color", suit_clr)
 	if font_nunito: corner_suit.add_theme_font_override("font", font_nunito)
 	top_row.add_child(corner_suit)
@@ -531,7 +532,7 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 	var deco = Label.new()
 	deco.text = suit
 	deco.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	deco.add_theme_font_size_override("font_size", 20 if large else 13)
+	deco.add_theme_font_size_override("font_size", 20 if xlarge else (14 if large else 12))
 	deco.add_theme_color_override("font_color", suit_clr)
 	deco.modulate.a = 0.18
 	center.add_child(deco)
@@ -539,7 +540,7 @@ func _make_card(parent: Control, card: Dictionary, w: float, h: float,
 	var val_lbl = Label.new()
 	val_lbl.text = str(val)
 	val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	val_lbl.add_theme_font_size_override("font_size", 44 if large else 26)
+	val_lbl.add_theme_font_size_override("font_size", 48 if xlarge else (36 if large else 22))
 	val_lbl.add_theme_color_override("font_color", suit_clr)
 	if font_anton: val_lbl.add_theme_font_override("font", font_anton)
 	center.add_child(val_lbl)
