@@ -162,14 +162,16 @@ func simulate_battle(left_pile: Dictionary, right_pile: Dictionary,
 			left_eff += 3
 			events.append({"side": "left",  "ability": "avenger", "trigger": "on_reveal", "delta": 3})
 		if left_abls.has("rage_build") and left_loss_count > 0:
-			left_eff += left_loss_count
-			events.append({"side": "left",  "ability": "rage_build", "trigger": "on_reveal", "delta": left_loss_count})
+			var rb_left = mini(left_loss_count, 4)
+			left_eff += rb_left
+			events.append({"side": "left",  "ability": "rage_build", "trigger": "on_reveal", "delta": rb_left})
 		if right_abls.has("avenger") and prev_winner == "left":
 			right_eff += 3
 			events.append({"side": "right", "ability": "avenger", "trigger": "on_reveal", "delta": 3})
 		if right_abls.has("rage_build") and right_loss_count > 0:
-			right_eff += right_loss_count
-			events.append({"side": "right", "ability": "rage_build", "trigger": "on_reveal", "delta": right_loss_count})
+			var rb_right = mini(right_loss_count, 4)
+			right_eff += rb_right
+			events.append({"side": "right", "ability": "rage_build", "trigger": "on_reveal", "delta": rb_right})
 
 		# ── On Reveal ────────────────────────────────────────────────────────
 		for rev_ev in Abilities.on_reveal_events(left_abls):

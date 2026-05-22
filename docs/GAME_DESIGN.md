@@ -142,21 +142,15 @@ Card abilities use a small set of trigger events so the language stays consisten
 
 ## 7. Currency System
 
-Two currencies, each with a clear and separate role:
+One currency: **Gold.**
 
-### Gold (turn currency)
-- **Refills** to a base amount (e.g. 10) every shop turn.
-- **Doesn't carry over** — use it or lose it.
-- **Spent on:** buying cards, rerolling shop, selling cards (some refund), freezing shop slots, buying Jokers.
-- **Role:** tactical roster management.
+- **Refills** to **7** every shop turn.
+- **Doesn't carry over** between turns (exception: Frugal joker carries 25%).
+- **Earned additionally** from battle results via card abilities and joker bonuses (e.g. Tithe, fortune, golden_touch).
+- **Spent on:** power-ups (abilities attached to cards), rerolling the shop, selling cards, buying Jokers, upgrading the shop tier.
+- **Role:** the single resource governing both tactical (what's in my pile?) and strategic (what gets stronger?) decisions.
 
-### Mana (run currency)
-- **Earned by:** winning battles (+2), losing battles (+1), specific card abilities, Joker effects.
-- **Persists** across turns within a run.
-- **Spent on:** permanent buffs to individual cards (the primary upgrade path).
-- **Role:** strategic power growth.
-
-**Why two currencies:** The split prevents the shop from feeling one-note. Gold answers "what's in my pile?"; mana answers "what gets stronger?" They don't compete for the same budget, so each shop turn presents two distinct decision spaces.
+*Design note: an earlier draft used two currencies (Gold + Mana). Mana was removed during prototyping. The depth that mana was meant to add is instead provided by the rarity system (Common → Legendary ability costs), which creates the same "stretch goal" spending decisions without a second resource to track.*
 
 ---
 
@@ -164,38 +158,47 @@ Two currencies, each with a clear and separate role:
 
 Each shop turn, the player can:
 
-- **Buy a card** (e.g. 3 gold) — adds to pile, capped at 10.
-- **Sell a card** (refunds 1 gold + 1 mana) — frees a slot, recovers value.
-- **Reroll the shop** (1 gold) — refresh offered cards.
-- **Freeze a shop slot** (free) — keep a specific card available next turn.
-- **Buy a Joker** (premium gold cost or mana cost — TBD) — global run-modifier.
-- **Spend mana on permanent buffs** (see below).
-- **Level up the shop tier** (gold cost, optional) — unlocks higher-tier cards earlier.
+- **Buy a power-up** (3–16 gold, scales with rarity) — attaches an ability to one card in your pile.
+- **Sell a card** (costs 1 gold) — removes a card from your pile. A pile tax: you pay to trim. Max 1 sell per shop turn (some jokers raise this).
+- **Reroll the shop** (1 gold) — refresh the 3 offered power-ups.
+- **Buy a Joker** (5–18 gold, scales with rarity) — global run-modifier. Max 2 jokers per run (3 with The Architect joker).
+- **Upgrade the shop tier** (4–12 gold, scales with current level) — raises rarity ceiling for power-ups and jokers. 10 levels total.
+- **Upgrade a card's value** (4 gold) — permanently +1 to a chosen card's value.
 
-**Shop tier curve** (recommended starting point):
+**Shop tier and rarity:**
 
-| Round | Max card tier | Card values seen |
-|-------|---------------|------------------|
-| 1–2   | 1             | 1, 2, 3          |
-| 3–4   | 2             | up to 5          |
-| 5–6   | 3             | up to 7          |
-| 7–8   | 4             | up to 9          |
-| 9+    | 5             | up to 10 + legendaries |
+The shop has 10 upgrade levels. Higher levels unlock higher-rarity items:
 
-This gates raw power so players can't rush 10s on round 1. It mirrors SAP's tier system and Battlegrounds' tavern tiers.
+| Shop level | Rarity weights |
+|------------|----------------|
+| 1 | Common only |
+| 2 | 70% Common / 30% Uncommon |
+| 3 | 50% / 35% / 15% Rare |
+| 5 | 25% / 30% / 30% / 14% / 1% Epic / Legendary |
+| 10 | 1% / 5% / 14% / 30% / 50% Legendary |
+
+Players who invest in shop upgrades see more powerful and rarer items earlier. Players who skip upgrades stay at lower rarity but save gold for power-ups and jokers.
 
 ---
 
-## 9. Permanent Buffs (Primary Upgrade Path)
+## 9. Permanent Upgrades
 
-The main way players strengthen their pile mid-run. Spent with mana. Scales with impact:
+Two paths to strengthen your pile mid-run, both costing gold:
 
-- **+1 value** (e.g. 3 mana): A 5 becomes a 6.
-- **+1 ability magnitude** (e.g. 2 mana): "gain 2 gold" becomes "gain 3 gold."
-- **Add a keyword** (e.g. 5 mana): Give a card "Pierce" (wins ties), "Echo" (triggers ability twice), "Anchor" (always among the 5 flipped), etc.
-- **Evolve** (e.g. 8 mana): Transform a card into a souped-up version with new art, stronger ability, +1–2 value.
+- **+1 value to a card** (4 gold): A 5 becomes a 6. Simple, direct, always available.
+- **Buy a power-up ability** (3–16 gold by rarity): Attach an ability to a card. Abilities are the primary strategic layer — they determine archetype, not raw value.
 
-**Target pacing:** A run should let a player make ~4–6 meaningful upgrades total. Enough to feel built, not enough to max everything.
+**Power-up rarity and cost:**
+
+| Rarity | Cost | Example |
+|--------|------|---------|
+| Common | 3g | Blaze (+2 on reveal), Valor (on win → next ally +1) |
+| Uncommon | 4–5g | Echo (+3 on reveal), Avenger (if prev flip lost → +3) |
+| Rare | 6–7g | Eclipse (+5 on reveal), Anchor (always flips) |
+| Epic | 9–11g | Titan (+6 on reveal), Phantom (+100 flip weight) |
+| Legendary | 14–16g | Godslayer (+9 on reveal), Ascendant (+4 reveal + +4 next on win) |
+
+**Target pacing:** A run at shop level 3–5 typically lets a player make 4–6 meaningful ability purchases. Enough to feel built and committed, not enough to max everything.
 
 ---
 
@@ -337,25 +340,65 @@ This locks in a fairness-first philosophy aligned with SAP, Balatro, and Slay th
 
 ---
 
-## 13. Open Questions / TBD
+## 13. Decided Parameters
 
-These are unresolved and should be decided early in implementation:
+These were open questions during design. All are now decided and implemented.
 
-1. **Joker slot count** — 1, 2, 3, or variable? (Affects synergy depth and balance burden.)
-2. **Starter pile composition** — what 10 cards does everyone begin with? Should all be value 1–3 with simple abilities, or include some value variance?
-3. **Tiebreak rules** — what happens when both flipped cards are the same value? Default options:
-   - No points awarded
-   - Both players get a point
-   - Resolved by ability priority
-   - Triggers any On Tie effects, then no points
-4. **Damage formula** — exact HP loss per battle (margin-based, fixed, or hybrid).
-5. **Starting HP** — 20? 25? 30?
-6. **Gold per turn** — 10 baseline? Scaling?
-7. **Live PvP timing** — concurrent shop timers, or async-first only for v1?
+| Parameter | Decision | Notes |
+|-----------|----------|-------|
+| **Starting HP** | 25 | Both players. Damage is margin-capped so runs last 5–15+ rounds. |
+| **Gold per turn** | 7 | Refills each round. Tight enough that every purchase matters. |
+| **Joker slot count** | 2 (base), 3 with The Architect joker | Enough for a 2-joker synergy without overwhelming complexity. |
+| **Starter pile** | Cards valued 1–10, one of each | Clean, symmetric start. All players identical at round 1. |
+| **Tiebreak rules** | No points awarded to either player. On Tie effects trigger. | Ties are not wins by default; specific cards (Pierce, Tiebreaker) change this. |
+| **Damage formula** | `damage = min(3, margin) + extra_damage` | Margin = flip score difference. Extra damage from jokers (e.g. Chain Lightning +2). Max base damage: 3 HP/battle. |
+| **Sell mechanic** | Costs 1 gold. Max 1 sell per shop turn. | Selling is a *tax*, not a refund. Deliberate — prevents trivial pile reshaping. Some jokers (Curator, Liquidator) raise the sell cap. |
+| **Shop upgrades** | 10 levels. Cost scales: 4g (lv1→2) to 12g (lv9→10). | Leveling is optional but unlocks higher rarity items. |
+| **Live PvP timing** | Async-first for v1 (ghost piles). Concurrent shop timers in v2. | v1 is single-player loop vs AI piles. 8-player async lobby is v1.5. |
 
 ---
 
-## 14. Suggested Build Order (For Implementation)
+## 14. Formulas
+
+All math used in the engine, canonized here.
+
+**Battle damage:**
+```
+damage = min(3, margin) + extra_damage
+margin = abs(left_score - right_score)   # flip win count difference
+```
+Extra damage sources: Chain Lightning joker (+2 if 3 consecutive wins).
+
+**Flip probability (per card):**
+```
+P(card flips) ≈ 1 - (1 - w/W)^S
+w = effective_weight(card)
+W = sum of effective_weight for all non-anchor cards in pile
+S = flip slots remaining after anchors are reserved
+```
+Base weight = 100. Ability modifiers stack (Spotlight +40, Stage Hog +90, Phantom +100, Wallflower -50, Cannon Fodder +50).
+
+**Effective value (per flip):**
+```
+effective = card.value + pending_from_previous_flip + on_reveal_bonus + joker_pre_flip_bonus
+```
+Pending resets to 0 after each flip. On Reveal bonuses apply before comparison.
+
+**Shop upgrade cost:**
+```
+cost = 3 + current_shop_level   # 4g (lv1→2), 5g (lv2→3), … 12g (lv9→10)
+```
+Patron perk: subtract 2g (minimum 1g).
+
+**Gold per round:**
+```
+gold = 7 (base) + battle_gold_bonus + perk_bonus + frugal_carryover
+frugal_carryover = floor(previous_gold * 0.25)   # Frugal joker only
+```
+
+---
+
+## 15. Suggested Build Order
 
 1. **Battle resolver** — given two 10-card piles, simulate a 5-flip battle with abilities. Pure logic, no UI.
 2. **Shop logic** — gold/mana economy, buying/selling, tier system.
@@ -368,7 +411,7 @@ These are unresolved and should be decided early in implementation:
 
 ---
 
-## 15. Design Principles (Keep These In Mind)
+## 16. Design Principles
 
 - **Readability first.** Numbers 1–10 are universal. Don't break this.
 - **Originality over genre-borrowing.** Pileup's voice is *committed chaos via partial deployment with loaded dice*. Mechanics exist nowhere else (the Hush, visible probability, Reveal Window, bait archetype). Resist the temptation to import features from SAP, Bazaar, Oaken Tower, Battlegrounds, etc. unless they directly serve Pileup's identity. Genre defaults are the path to a remix album, not an original record.
